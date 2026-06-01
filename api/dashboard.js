@@ -26,7 +26,7 @@ function config() {
 function queryString(queries) {
   const params = new URLSearchParams();
   for (const query of queries) {
-    params.append("queries[]", query);
+    params.append("queries[]", JSON.stringify(query));
   }
   return params.toString();
 }
@@ -57,8 +57,8 @@ function normalizeRow(row) {
 
 async function fetchImportRuns(cfg) {
   const result = await appwriteListRows(cfg, cfg.importRunsTableId, [
-    'orderDesc("$createdAt")',
-    "limit(20)",
+    { method: "orderDesc", attribute: "$createdAt" },
+    { method: "limit", values: [20] },
   ]);
   return (result.rows || []).map(normalizeRow);
 }
@@ -66,9 +66,12 @@ async function fetchImportRuns(cfg) {
 async function fetchScorecardRows(cfg, importRunId) {
   const rows = [];
   for (let offset = 0; offset < MAX_ROWS; offset += PAGE_SIZE) {
-    const queries = [`limit(${PAGE_SIZE})`, `offset(${offset})`];
+    const queries = [
+      { method: "limit", values: [PAGE_SIZE] },
+      { method: "offset", values: [offset] },
+    ];
     if (importRunId) {
-      queries.unshift(`equal("import_run_id", ["${escapeQueryValue(importRunId)}"])`);
+      queries.unshift({ method: "equal", attribute: "import_run_id", values: [importRunId] });
     }
     const result = await appwriteListRows(cfg, cfg.scorecardTableId, queries);
     const page = (result.rows || []).map(normalizeRow);
@@ -78,10 +81,6 @@ async function fetchScorecardRows(cfg, importRunId) {
     }
   }
   return rows;
-}
-
-function escapeQueryValue(value) {
-  return String(value).replace(/\\/g, "\\\\").replace(/"/g, '\\"');
 }
 
 function uniqueSorted(rows, key) {
@@ -257,4 +256,3 @@ export default async function handler(request, response) {
     });
   }
 }
-

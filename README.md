@@ -26,7 +26,7 @@ Fill `.env` with your Appwrite endpoint, project ID, and an API key with databas
 
 ## Frontend
 
-The dashboard frontend lives in `frontend/` and is configured for Vercel. It uses a serverless API route so the Appwrite API key stays server-side.
+The dashboard frontend lives in `frontend/` and is configured for Vercel. It uses the root `api/dashboard.js` serverless route so the Appwrite API key stays server-side.
 
 Required Vercel environment variables:
 

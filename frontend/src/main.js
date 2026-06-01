@@ -302,8 +302,12 @@ async function loadDashboard() {
   if (state.selectedPeriod) params.set("period", state.selectedPeriod);
 
   try {
-    const response = await fetch(`/api/dashboard?${params.toString()}`);
-    const payload = await response.json();
+    const query = params.toString();
+    const response = await fetch(`/api/dashboard${query ? `?${query}` : ""}`);
+    const contentType = response.headers.get("content-type") || "";
+    const payload = contentType.includes("application/json")
+      ? await response.json()
+      : { detail: await response.text() };
     if (!response.ok) {
       throw new Error(payload.detail || payload.error || response.statusText);
     }
@@ -319,4 +323,3 @@ async function loadDashboard() {
 }
 
 loadDashboard();
-
