@@ -95,6 +95,81 @@ const CUSTOMER_SUMMARY_MARKETS = [
   "FEDERATED COOP",
 ];
 
+const CATEGORY_COMPARE_BRANDS = ["Tim Hortons", "Private Label", "Starbucks", "McCafe"];
+const CATEGORY_OTHER_BRAND_ORDER = [
+  "Van Houtte",
+  "Nescafe",
+  "Maxwell House",
+  "Nabob",
+  "Kicking Horse",
+  "Lavazza",
+  "Folgers",
+  "Melitta",
+  "Timothys",
+  "AO Brand",
+  "Kopiko",
+];
+
+const CATEGORY_METRIC_GROUPS = [
+  {
+    title: "Topline",
+    tone: "topline",
+    columns: [
+      { key: "dollarShareProduct", label: "$ Shr - Product", format: percent },
+      { key: "dollarShareChangeYa", label: "$ Shr Chg YA - Product", format: changeNumber },
+      { key: "dollarSales000", label: "$ ('000)", format: wholeNumber },
+      { key: "dollarPctChangeYa", label: "$ ('000) % Chg YA", format: percent },
+    ],
+  },
+  {
+    title: "Volume",
+    tone: "volume",
+    columns: [
+      { key: "units000", label: "Units ('000)", format: wholeNumber },
+      { key: "unitsPctChangeYa", label: "Units % Chg YA", format: percent },
+    ],
+  },
+  {
+    title: "Price",
+    tone: "price",
+    columns: [
+      { key: "avgUnitsPrice", label: "Avg Units Price", format: currency },
+      { key: "avgUnitsPriceChangeYa", label: "Avg Units Price Chg YA", format: currency },
+      { key: "avgUnitsPricePctChangeYa", label: "Avg Units Price % Chg YA", format: percent },
+    ],
+  },
+  {
+    title: "Promotion",
+    tone: "promotion",
+    columns: [
+      { key: "soldOnPromoPct", label: "% Sold on Promotion", format: percent },
+      { key: "soldOnPromoChangeYaPct", label: "% Sold on Promotion Chg YA", format: percent },
+    ],
+  },
+  {
+    title: "Distribution",
+    tone: "distribution",
+    columns: [
+      { key: "acvPct", label: "% ACV", format: percent },
+      { key: "acvPctChangeYa", label: "% ACV % Chg YA", format: percent },
+      { key: "itemsPerStore", label: "No. of Items per Store", format: valueNumber },
+      { key: "itemsPerStoreChangeYa", label: "No. of Items per Store Chg YA", format: changeNumber },
+    ],
+  },
+  {
+    title: "Velocity",
+    tone: "velocity",
+    columns: [
+      { key: "dollarSppdp", label: "$ SPPDP", format: valueNumber },
+      { key: "dollarSppdpPctChangeYa", label: "$ SPPDP % Chg YA", format: percent },
+    ],
+  },
+];
+
+const CATEGORY_METRIC_COLUMNS = CATEGORY_METRIC_GROUPS.flatMap((group) =>
+  group.columns.map((column) => ({ ...column, tone: group.tone })),
+);
+
 const SUMMARY_COLUMNS = [
   { key: "dollarShareProduct", label: "$ Share", format: percent },
   { key: "dollarShareChangeYa", label: "Share Chg", format: pointChange },
@@ -144,6 +219,14 @@ const state = {
   data: null,
   loading: true,
   error: null,
+  categoryExpanded: new Set([
+    "category:all",
+    "category:all:packaged",
+    "category:brand:Tim Hortons",
+    "category:brand:Private Label",
+    "category:brand:Starbucks",
+    "category:brand:McCafe",
+  ]),
   viewFilters: {},
 };
 
@@ -515,6 +598,15 @@ function wholeNumber(value) {
   });
 }
 
+function changeNumber(value, digits = 1) {
+  if (value == null) return "n/a";
+  const formatted = Math.abs(value).toLocaleString(undefined, {
+    maximumFractionDigits: digits,
+    minimumFractionDigits: digits,
+  });
+  return value < 0 ? `(${formatted})` : formatted;
+}
+
 function plainCell(value) {
   return `<td>${escapeHtml(value)}</td>`;
 }
@@ -535,34 +627,253 @@ function trendCell(value, formatter) {
 }
 
 function renderCategorySummary() {
-  const rows = categorySummaryRows();
+  const tree = categorySummaryTree();
+  const rows = flattenCategoryTree(tree);
   return `
     <section class="view-strip">
       ${metricPill("Market", state.data.filters.market)}
-      ${metricPill("Rows", rows.length.toLocaleString())}
-      ${metricPill("Source", "Raw Nielsen tabs")}
+      ${metricPill("Time Frame", state.data.filters.period)}
+      ${metricPill("Visible Rows", rows.length.toLocaleString())}
     </section>
-    <section class="panel">
+    <section class="category-summary-card">
       <header>
-        <h2>Category Scorecard</h2>
+        <h2>Coffee Category Summary</h2>
         <span>${escapeHtml(state.data.filters.market)} | ${escapeHtml(state.data.filters.period)}</span>
       </header>
-      ${summaryTable(rows, "Product / Pack Group", true)}
+      ${categorySummaryTable(rows)}
     </section>
   `;
 }
 
-function categorySummaryRows() {
+function categorySummaryTree() {
   const rows = state.data.views.category.rows;
-  const used = new Set();
-  return CATEGORY_SUMMARY_ROWS.map((spec) => {
-    const row = rows.find((candidate) => candidate.product === spec.product && candidate.sourcePullType === spec.sourcePullType);
-    if (!row) return null;
-    const key = `${row.product}|${row.sourcePullType}`;
-    if (used.has(key)) return null;
-    used.add(key);
-    return { ...row, displayLabel: spec.label, displayGroup: spec.group };
-  }).filter(Boolean);
+  const lookup = categoryLookup(rows);
+  const allCoffee = categoryNode({
+    key: "category:all",
+    label: "Packaged Coffee & Instant Coffee",
+    row: findCategoryRow(lookup, "topline_brands", "Packaged Coffee & Instant Coffee"),
+    kind: "total",
+    children: [
+      categoryNode({
+        key: "category:all:packaged",
+        label: "Packaged Coffee",
+        row: findCategoryRow(lookup, "topline_brands", "Packaged Coffee"),
+        kind: "segment",
+        children: [
+          rgSegmentNode(lookup, null, "category:all:packaged"),
+          singleServeSegmentNode(lookup, null, "category:all:packaged"),
+        ],
+      }),
+      instantSegmentNode(lookup, null, "category:all"),
+    ],
+  });
+
+  const mainBrands = CATEGORY_COMPARE_BRANDS.map((brand) => brandCategoryNode(lookup, brand, `category:brand:${brand}`));
+  const otherBrands = otherBrandNames(rows)
+    .map((brand) => brandCategoryNode(lookup, brand, `category:other:${brand}`, true))
+    .filter(Boolean);
+  const allOther = categoryNode({
+    key: "category:other",
+    label: "All Other Brands",
+    row: findCategoryRow(lookup, "topline_brands", "All Other Brands"),
+    kind: "otherTotal",
+    children: otherBrands,
+  });
+
+  return [allCoffee, ...mainBrands, allOther].filter(Boolean);
+}
+
+function categoryLookup(rows) {
+  const lookup = new Map();
+  rows.forEach((row) => {
+    lookup.set(`${row.sourcePullType}|${row.product}`, row);
+  });
+  return lookup;
+}
+
+function findCategoryRow(lookup, sourcePullType, products) {
+  const productList = Array.isArray(products) ? products : [products];
+  for (const product of productList) {
+    const row = lookup.get(`${sourcePullType}|${product}`);
+    if (row) return row;
+  }
+  return null;
+}
+
+function categoryNode({ key, label, row, kind = "detail", children = [] }) {
+  const cleanChildren = children.filter(Boolean);
+  if (!row && !cleanChildren.length) return null;
+  return { key, label, row, kind, children: cleanChildren };
+}
+
+function productCandidates(prefix, label) {
+  if (!prefix) return [label];
+  const primary = `${prefix} ${label}`;
+  if (label.includes("K Cup")) {
+    return [primary, primary.replace("K Cup", "Cup")];
+  }
+  if (label === "Tassimo") {
+    return [primary, `${prefix} Tassimo Single Serve`];
+  }
+  return [primary];
+}
+
+function brandCategoryNode(lookup, brand, key, isOther = false) {
+  return categoryNode({
+    key,
+    label: brand,
+    row: findCategoryRow(lookup, "topline_brands", brand),
+    kind: isOther ? "otherBrand" : "brand",
+    children: [
+      rgSegmentNode(lookup, brand, key),
+      singleServeSegmentNode(lookup, brand, key),
+      instantSegmentNode(lookup, brand, key),
+    ],
+  });
+}
+
+function rgSegmentNode(lookup, prefix, parentKey) {
+  const baseKey = `${parentKey}:rg`;
+  return categoryNode({
+    key: baseKey,
+    label: "R&G",
+    row: findCategoryRow(lookup, "rg", productCandidates(prefix, "R&G")),
+    kind: "segment",
+    children: [
+      formatNode(lookup, prefix, baseKey, "Bag", "rg", ["Small Bag", "Medium Bag", "Large Bag"]),
+      formatNode(lookup, prefix, baseKey, "Can", "rg", ["Small Can", "Medium Can", "Large Can"]),
+      formatNode(lookup, prefix, baseKey, "Club Format R&G", "rg"),
+    ],
+  });
+}
+
+function singleServeSegmentNode(lookup, prefix, parentKey) {
+  const baseKey = `${parentKey}:singleServe`;
+  return categoryNode({
+    key: baseKey,
+    label: "Single Serve",
+    row: findCategoryRow(lookup, "single_serve", productCandidates(prefix, "Single Serve")),
+    kind: "segment",
+    children: [
+      formatNode(lookup, prefix, baseKey, "K Cup", "single_serve", ["K Cup Small", "K Cup Large", "K Cup XL", "Club Format K Cup"]),
+      formatNode(lookup, prefix, baseKey, "Tassimo", "single_serve"),
+      formatNode(lookup, prefix, baseKey, "Caps", "single_serve"),
+    ],
+  });
+}
+
+function instantSegmentNode(lookup, prefix, parentKey) {
+  const baseKey = `${parentKey}:instant`;
+  return categoryNode({
+    key: baseKey,
+    label: "Instant Coffee",
+    row: findCategoryRow(lookup, "instant", productCandidates(prefix, "Instant Coffee")),
+    kind: "segment",
+    children: [
+      formatNode(lookup, prefix, baseKey, "Instant Regular", "instant"),
+      formatNode(lookup, prefix, baseKey, "Instant Grand", "instant"),
+    ],
+  });
+}
+
+function formatNode(lookup, prefix, parentKey, label, sourcePullType, childLabels = []) {
+  const key = `${parentKey}:${label}`;
+  return categoryNode({
+    key,
+    label,
+    row: findCategoryRow(lookup, sourcePullType, productCandidates(prefix, label)),
+    kind: childLabels.length ? "format" : "detail",
+    children: childLabels.map((childLabel) =>
+      categoryNode({
+        key: `${key}:${childLabel}`,
+        label: childLabel,
+        row: findCategoryRow(lookup, sourcePullType, productCandidates(prefix, childLabel)),
+        kind: "size",
+      }),
+    ),
+  });
+}
+
+function otherBrandNames(rows) {
+  const excluded = new Set([
+    "Packaged Coffee & Instant Coffee",
+    "Packaged Coffee",
+    "Instant Coffee",
+    "Tim Hortons",
+    "Private Label",
+    "Starbucks",
+    "McCafe",
+    "All Other Brands",
+    "Competitive Brands",
+  ]);
+  const available = new Set(
+    rows
+      .filter((row) => row.sourcePullType === "topline_brands")
+      .map((row) => row.product)
+      .filter((product) => product && !excluded.has(product)),
+  );
+  const ordered = CATEGORY_OTHER_BRAND_ORDER.filter((brand) => available.has(brand));
+  const extras = [...available].filter((brand) => !ordered.includes(brand)).sort((a, b) => a.localeCompare(b));
+  return [...ordered, ...extras];
+}
+
+function flattenCategoryTree(nodes, depth = 0) {
+  return nodes.flatMap((node) => {
+    const row = { ...node, depth, isExpanded: state.categoryExpanded.has(node.key) };
+    if (!row.isExpanded || !node.children.length) return [row];
+    return [row, ...flattenCategoryTree(node.children, depth + 1)];
+  });
+}
+
+function categorySummaryTable(rows) {
+  if (!rows.length) return emptyPanel("No category rows for this filter.");
+  return `
+    <div class="category-table-wrap">
+      <table class="category-summary-table">
+        <thead>
+          <tr class="category-group-row">
+            <th rowspan="2">Brand / Segment / Format</th>
+            ${CATEGORY_METRIC_GROUPS.map((group) => `<th class="${escapeHtml(group.tone)}" colspan="${group.columns.length}">${escapeHtml(group.title)}</th>`).join("")}
+          </tr>
+          <tr class="category-column-row">
+            ${CATEGORY_METRIC_COLUMNS.map((column) => `<th class="${escapeHtml(column.tone)}">${escapeHtml(column.label)}</th>`).join("")}
+          </tr>
+        </thead>
+        <tbody>
+          ${rows.map(categorySummaryRow).join("")}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+function categorySummaryRow(node) {
+  const expandable = node.children.length > 0;
+  return `
+    <tr class="category-row depth-${node.depth} ${node.kind}">
+      <th>
+        <span class="tree-indent" style="--depth:${node.depth}"></span>
+        ${
+          expandable
+            ? `<button class="tree-toggle" type="button" aria-expanded="${node.isExpanded ? "true" : "false"}" data-category-toggle="${escapeHtml(node.key)}">${node.isExpanded ? "-" : "+"}</button>`
+            : `<span class="tree-spacer"></span>`
+        }
+        <span>${escapeHtml(node.label)}</span>
+      </th>
+      ${CATEGORY_METRIC_COLUMNS.map((column) => categoryMetricCell(node.row, column)).join("")}
+    </tr>
+  `;
+}
+
+function categoryMetricCell(row, column) {
+  const value = row?.[column.key];
+  const change = isChangeMetric(column.key);
+  const className = change ? deltaClass(value) : "neutral";
+  return `<td class="${escapeHtml(column.tone)} ${change ? "change-metric" : ""} ${className}">${escapeHtml(column.format(value))}</td>`;
+}
+
+function isChangeMetric(key) {
+  return key.includes("Change") || key.includes("PctChange") || key.endsWith("PctChangeYa") || key === "dollarPctChangeYa";
 }
 
 function renderCategoryDetail() {
@@ -781,6 +1092,19 @@ function bindInteractions() {
   competitorMode?.addEventListener("change", (event) => {
     activeFilters().competitorMode = event.target.checked ? "brands" : "aggregate";
     render();
+  });
+
+  document.querySelectorAll("[data-category-toggle]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const key = button.dataset.categoryToggle;
+      if (!key) return;
+      if (state.categoryExpanded.has(key)) {
+        state.categoryExpanded.delete(key);
+      } else {
+        state.categoryExpanded.add(key);
+      }
+      render();
+    });
   });
 }
 

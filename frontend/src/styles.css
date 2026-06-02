@@ -36,7 +36,7 @@ svg {
 .app-frame {
   background: #f7f4ef;
   display: grid;
-  grid-template-columns: 260px minmax(0, 1fr);
+  grid-template-columns: 238px minmax(0, 1fr);
   min-height: 100vh;
 }
 
@@ -72,9 +72,10 @@ svg {
 }
 
 .nav-list {
+  align-content: start;
   display: grid;
-  gap: 8px;
-  margin-top: 18px;
+  gap: 6px;
+  margin-top: 16px;
 }
 
 .nav-item {
@@ -84,10 +85,11 @@ svg {
   border-radius: 8px;
   color: rgba(255, 255, 255, 0.78);
   display: grid;
-  gap: 10px;
-  grid-template-columns: 22px minmax(0, 1fr);
-  min-height: 46px;
-  padding: 0 11px;
+  gap: 8px;
+  grid-template-columns: 18px minmax(0, 1fr);
+  height: 38px;
+  min-height: 38px;
+  padding: 0 10px;
   text-align: left;
 }
 
@@ -103,8 +105,9 @@ svg {
 }
 
 .nav-item span {
-  font-size: 0.92rem;
+  font-size: 0.82rem;
   font-weight: 760;
+  line-height: 1;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -412,7 +415,9 @@ select {
 }
 
 .scorecard-wrap {
+  max-height: calc(100vh - 260px);
   overflow: auto;
+  position: relative;
 }
 
 .scorecard-table {
@@ -435,6 +440,37 @@ select {
 .scorecard-table td:first-child {
   min-width: 230px;
   text-align: left;
+}
+
+.scorecard-table thead th {
+  position: sticky;
+  z-index: 5;
+}
+
+.scorecard-table thead tr:nth-child(1) th {
+  top: 0;
+}
+
+.scorecard-table thead tr:nth-child(2) th {
+  top: 27px;
+}
+
+.scorecard-table thead tr:nth-child(3) th {
+  top: 62px;
+}
+
+.scorecard-table thead th:first-child,
+.scorecard-table tbody th:first-child {
+  left: 0;
+  position: sticky;
+}
+
+.scorecard-table thead th:first-child {
+  z-index: 8;
+}
+
+.scorecard-table tbody th:first-child {
+  z-index: 3;
 }
 
 .scorecard-group-row th {
@@ -496,6 +532,12 @@ select {
   background: #432021;
   color: #ffffff;
   font-weight: 900;
+}
+
+.scorecard-table tbody tr.section-total:hover th,
+.scorecard-table tbody tr.section-total:hover td {
+  background: #432021;
+  color: #ffffff;
 }
 
 .scorecard-table .brand-row th {
@@ -800,6 +842,234 @@ tbody tr:hover td {
 .loading-grid .wide {
   grid-column: span 2;
   height: 320px;
+}
+
+.category-summary-card {
+  background: #ffffff;
+  border: 1px solid #8e391a;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.category-summary-card header {
+  align-items: center;
+  background: #ffffff;
+  border-bottom: 1px solid #8e391a;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  min-height: 46px;
+  padding: 10px 14px;
+}
+
+.category-summary-card h2 {
+  color: #c8102e;
+  font-size: 1.55rem;
+  line-height: 1;
+  margin: 0;
+}
+
+.category-summary-card header span {
+  background: #dbc0c0;
+  color: #432021;
+  font-size: 0.78rem;
+  font-weight: 820;
+  padding: 6px 10px;
+}
+
+.category-table-wrap {
+  max-height: calc(100vh - 300px);
+  overflow: auto;
+  position: relative;
+}
+
+.category-summary-table {
+  border-collapse: collapse;
+  min-width: 1740px;
+  width: 100%;
+}
+
+.category-summary-table th,
+.category-summary-table td {
+  border: 1px solid #a74d22;
+  font-size: 0.72rem;
+  line-height: 1.05;
+  padding: 4px 6px;
+  text-align: right;
+  white-space: normal;
+}
+
+.category-summary-table thead th {
+  color: #ffffff;
+  font-weight: 900;
+  position: sticky;
+  z-index: 5;
+}
+
+.category-summary-table thead tr:first-child th {
+  top: 0;
+}
+
+.category-summary-table thead tr:nth-child(2) th {
+  top: 30px;
+}
+
+.category-summary-table thead th:first-child,
+.category-summary-table tbody th:first-child {
+  left: 0;
+  min-width: 300px;
+  position: sticky;
+  text-align: left;
+}
+
+.category-summary-table thead th:first-child {
+  background: #5b2712;
+  z-index: 8;
+}
+
+.category-summary-table tbody th:first-child {
+  background: #ffffff;
+  z-index: 3;
+}
+
+.category-group-row th {
+  height: 30px;
+  text-transform: uppercase;
+}
+
+.category-column-row th {
+  height: 54px;
+}
+
+.category-summary-table th.topline,
+.category-summary-table td.topline {
+  background-color: #fff1e5;
+}
+
+.category-summary-table th.volume,
+.category-summary-table td.volume {
+  background-color: #fff7df;
+}
+
+.category-summary-table th.price,
+.category-summary-table td.price {
+  background-color: #fff0f1;
+}
+
+.category-summary-table th.promotion,
+.category-summary-table td.promotion {
+  background-color: #fff4f5;
+}
+
+.category-summary-table th.distribution,
+.category-summary-table td.distribution {
+  background-color: #f4f1e5;
+}
+
+.category-summary-table th.velocity,
+.category-summary-table td.velocity {
+  background-color: #f0f0f0;
+}
+
+.category-group-row th.topline,
+.category-column-row th.topline {
+  background: #9f451f;
+}
+
+.category-group-row th.volume,
+.category-column-row th.volume {
+  background: #85540d;
+}
+
+.category-group-row th.price,
+.category-column-row th.price {
+  background: #7b0718;
+}
+
+.category-group-row th.promotion,
+.category-column-row th.promotion {
+  background: #b10926;
+}
+
+.category-group-row th.distribution,
+.category-column-row th.distribution {
+  background: #4b4435;
+}
+
+.category-group-row th.velocity,
+.category-column-row th.velocity {
+  background: #777777;
+}
+
+.category-summary-table tbody tr:hover th,
+.category-summary-table tbody tr:hover td {
+  background-color: #fff8df;
+}
+
+.category-summary-table tbody tr.total th,
+.category-summary-table tbody tr.brand th,
+.category-summary-table tbody tr.otherTotal th {
+  background: #ffc9ce;
+  color: #241f21;
+  font-weight: 900;
+}
+
+.category-summary-table tbody tr.total td,
+.category-summary-table tbody tr.brand td,
+.category-summary-table tbody tr.otherTotal td {
+  background-color: #ffd4d8;
+  font-weight: 850;
+}
+
+.category-summary-table tbody tr.segment th {
+  font-weight: 850;
+}
+
+.category-summary-table tbody tr.otherBrand th {
+  background: #ffe8eb;
+  font-weight: 850;
+}
+
+.category-summary-table .positive.change-metric {
+  color: #0d7a45 !important;
+}
+
+.category-summary-table .negative.change-metric {
+  color: #d91431 !important;
+  font-weight: 860;
+}
+
+.category-summary-table .neutral.change-metric {
+  color: #5b5350 !important;
+}
+
+.tree-indent {
+  display: inline-block;
+  width: calc(var(--depth) * 18px);
+}
+
+.tree-toggle,
+.tree-spacer {
+  align-items: center;
+  border-radius: 6px;
+  display: inline-flex;
+  height: 20px;
+  justify-content: center;
+  margin-right: 6px;
+  width: 20px;
+}
+
+.tree-toggle {
+  background: #ffffff;
+  border: 1px solid #ba7a57;
+  color: #7c230f;
+  font-size: 0.8rem;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.tree-toggle:hover {
+  background: #fff2e9;
 }
 
 @keyframes pulse {
