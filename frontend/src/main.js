@@ -858,7 +858,7 @@ function categorySummaryTable(rows) {
 function categorySummaryRow(node) {
   const expandable = node.children.length > 0;
   return `
-    <tr class="category-row depth-${node.depth} ${node.kind}">
+    <tr class="category-row depth-${node.depth} category-${node.kind}">
       <th class="sticky-col">
         <span class="tree-indent" style="--depth:${node.depth}"></span>
         ${
