@@ -170,48 +170,166 @@ const CATEGORY_METRIC_COLUMNS = CATEGORY_METRIC_GROUPS.flatMap((group) =>
   group.columns.map((column) => ({ ...column, tone: group.tone })),
 );
 
-const SUMMARY_COLUMNS = [
-  { key: "dollarShareProduct", label: "$ Share", format: percent },
-  { key: "dollarShareChangeYa", label: "Share Chg", format: pointChange },
-  { key: "dollarSales000", label: "$ ('000)", format: money000 },
-  { key: "dollarPctChangeYa", label: "$ % Chg YA", format: percent },
-  { key: "units000", label: "Units ('000)", format: valueNumber },
-  { key: "unitsPctChangeYa", label: "Units % Chg YA", format: percent },
-  { key: "avgUnitsPrice", label: "Avg Unit Price", format: currency },
-  { key: "avgUnitsPriceChangeYa", label: "Unit Price Chg", format: pointChange },
-  { key: "soldOnPromoPct", label: "Promo %", format: percent },
-  { key: "soldOnPromoChangeYaPct", label: "Promo Chg", format: pointChange },
-  { key: "acvPct", label: "ACV %", format: percent },
-  { key: "acvPctChangeYa", label: "ACV Chg", format: percent },
-  { key: "itemsPerStore", label: "Items / Store", format: valueNumber },
-  { key: "dollarSppdp", label: "$ SPPDP", format: valueNumber },
-  { key: "dollarSppdpPctChangeYa", label: "$ SPPDP % Chg", format: percent },
+const DETAIL_METRIC_GROUPS = [
+  {
+    title: "Topline",
+    tone: "topline",
+    columns: [
+      { key: "dollarShareProduct", label: "$ Shr - Product", format: percent },
+      { key: "dollarShareChangeYa", label: "$ Shr Chg YA - Product", format: changeNumber },
+      { key: "dollarSales000", label: "$ ('000)", format: wholeNumber },
+      { key: "dollarSalesChangeYa000", label: "$ ('000) Chg YA", format: changeNumber },
+      { key: "dollarPctChangeYa", label: "$ % Chg YA", format: percent },
+    ],
+  },
+  {
+    title: "Volume",
+    tone: "volume",
+    columns: [
+      { key: "pounds000", label: "Pounds ('000)", format: valueNumber },
+      { key: "poundsChangeYa000", label: "Pounds ('000) Chg YA", format: changeNumber },
+      { key: "poundsPctChangeYa", label: "Pounds % Chg YA", format: percent },
+      { key: "units000", label: "Units ('000)", format: valueNumber },
+      { key: "unitsChangeYa000", label: "Units ('000) Chg YA", format: changeNumber },
+      { key: "unitsPctChangeYa", label: "Units % Chg YA", format: percent },
+    ],
+  },
+  {
+    title: "Price",
+    tone: "price",
+    columns: [
+      { key: "avgPoundsPrice", label: "Avg Pounds Price", format: currency },
+      { key: "avgPoundsPricePctChangeYa", label: "Avg Pounds Price % Chg YA", format: percent },
+      { key: "avgUnitsPrice", label: "Avg Units Price", format: currency },
+      { key: "avgUnitsPriceChangeYa", label: "Avg Units Price Chg YA", format: currency },
+      { key: "avgUnitsPricePctChangeYa", label: "Avg Units Price % Chg YA", format: percent },
+      { key: "noPromoUnitsPrice", label: "No Promo Units Price", format: currency },
+      { key: "noPromoUnitsPricePctChangeYa", label: "No Promo Units Price % Chg YA", format: percent },
+      { key: "anyPromoUnitsPrice", label: "Any Promo Units Price", format: currency },
+      { key: "anyPromoUnitsPricePctChangeYa", label: "Any Promo Units Price % Chg YA", format: percent },
+    ],
+  },
+  {
+    title: "Promotion",
+    tone: "promotion",
+    columns: [
+      { key: "soldOnPromoPct", label: "% Sold on Promotion", format: percent },
+      { key: "soldOnPromoChangeYaPct", label: "% Sold on Promotion Chg YA", format: percent },
+      { key: "displayOnlyUnits", label: "Disp Only Units ('000)", format: valueNumber },
+      { key: "displayOnlyUnitsPctChangeYa", label: "Disp Only Units % Chg YA", format: percent },
+      { key: "featureOnlyUnits", label: "Feat Only Units ('000)", format: valueNumber },
+      { key: "featureOnlyUnitsPctChangeYa", label: "Feat Only Units % Chg YA", format: percent },
+      { key: "priceDecreaseOnlyUnits", label: "Price Decr Only Units ('000)", format: valueNumber },
+      { key: "priceDecreaseOnlyUnitsPctChangeYa", label: "Price Decr Only Units % Chg YA", format: percent },
+      { key: "featureDisplayPriceDecreaseUnits", label: "Feat & Disp & Price Decr Units ('000)", format: valueNumber },
+      { key: "featureDisplayPriceDecreaseUnitsPctChangeYa", label: "Feat & Disp & Price Decr Units % Chg YA", format: percent },
+    ],
+  },
+  {
+    title: "Distribution",
+    tone: "distribution",
+    columns: [
+      { key: "acvPct", label: "% ACV", format: percent },
+      { key: "acvPctChangeYa", label: "% ACV % Chg YA", format: percent },
+      { key: "itemsPerStore", label: "No. of Items per Store", format: valueNumber },
+      { key: "itemsPerStoreChangeYa", label: "No. of Items per Store Chg YA", format: changeNumber },
+    ],
+  },
+  {
+    title: "Velocity",
+    tone: "velocity",
+    columns: [
+      { key: "dollarSppdp", label: "$ SPPDP", format: valueNumber },
+      { key: "dollarSppdpPctChangeYa", label: "$ SPPDP % Chg YA", format: percent },
+    ],
+  },
 ];
 
-const DETAIL_COLUMNS = [
-  { key: "dollarShareProduct", label: "$ Share", format: percent },
-  { key: "dollarShareChangeYa", label: "Share Chg", format: pointChange },
-  { key: "dollarSales000", label: "$ ('000)", format: money000 },
-  { key: "dollarPctChangeYa", label: "$ % Chg YA", format: percent },
-  { key: "pounds000", label: "Pounds ('000)", format: valueNumber },
-  { key: "poundsPctChangeYa", label: "Pounds % Chg", format: percent },
-  { key: "units000", label: "Units ('000)", format: valueNumber },
-  { key: "unitsPctChangeYa", label: "Units % Chg", format: percent },
-  { key: "avgPoundsPrice", label: "Avg Pounds Price", format: currency },
-  { key: "avgUnitsPrice", label: "Avg Units Price", format: currency },
-  { key: "avgUnitsPriceChangeYa", label: "Avg Units Price Chg", format: pointChange },
-  { key: "noPromoUnitsPrice", label: "No Promo Price", format: currency },
-  { key: "anyPromoUnitsPrice", label: "Any Promo Price", format: currency },
-  { key: "soldOnPromoPct", label: "% Sold on Promo", format: percent },
-  { key: "soldOnPromoChangeYaPct", label: "Promo Chg", format: pointChange },
-  { key: "displayOnlyUnits", label: "Display Units", format: valueNumber },
-  { key: "featureOnlyUnits", label: "Feature Units", format: valueNumber },
-  { key: "priceDecreaseOnlyUnits", label: "Price Decr Units", format: valueNumber },
-  { key: "acvPct", label: "% ACV", format: percent },
-  { key: "acvPctChangeYa", label: "ACV Chg", format: percent },
-  { key: "itemsPerStore", label: "Items / Store", format: valueNumber },
-  { key: "dollarSppdp", label: "$ SPPDP", format: valueNumber },
-  { key: "dollarSppdpPctChangeYa", label: "$ SPPDP % Chg", format: percent },
+const DETAIL_METRIC_COLUMNS = DETAIL_METRIC_GROUPS.flatMap((group) =>
+  group.columns.map((column) => ({ ...column, tone: group.tone })),
+);
+
+const CUSTOMER_TREE = [
+  { market: "All Markets/Customers/Banners", kind: "total" },
+  { market: "NATIONAL EX NFLD GDM", kind: "national" },
+  {
+    market: "NATIONAL CONVENTIONAL GDM",
+    kind: "national",
+    children: [
+      { market: "ONTARIO CONVENTIONAL GDM" },
+      { market: "QUEBEC CONVENTIONAL GDM" },
+    ],
+  },
+  {
+    market: "NATIONAL DISCOUNT GDM",
+    kind: "national",
+    children: [
+      { market: "ONTARIO DISCOUNT GDM" },
+      { market: "QUEBEC DISCOUNT GDM" },
+    ],
+  },
+  {
+    market: "LCL NATIONAL",
+    kind: "account",
+    children: [
+      { market: "LCL NATIONAL SUPERMARKETS DIV" },
+      { market: "LCL NATIONAL MARKET DIVISION" },
+      { market: "FORTINO'S" },
+      {
+        market: "Total RCSS",
+        children: [
+          { market: "RCSS ONTARIO" },
+          { market: "RCSS TOTAL WEST" },
+        ],
+      },
+      {
+        market: "LCL NATIONAL HARD DISCOUNT DIVISION",
+        children: [
+          { market: "NO FRILLS NATIONAL" },
+          { market: "LCL QUEBEC HARD DISCOUNT DIV" },
+        ],
+      },
+      { market: "SDM NATIONAL" },
+    ],
+  },
+  {
+    market: "SOBEYS INC NATIONAL INCL NFLD EX LAWTONS",
+    kind: "account",
+    children: [
+      { market: "SOBEYS FULL SERVICE NATIONAL INCL NFLD" },
+      {
+        market: "FRESHCO",
+        children: [
+          { market: "FRESHCO ONTARIO" },
+          { market: "FRESHCO TOTAL WEST" },
+        ],
+      },
+      { market: "IGA QUEBEC" },
+    ],
+  },
+  {
+    market: "METRO INC GROCERY BANNERS",
+    kind: "account",
+    children: [
+      {
+        market: "METRO/FOOD BASICS ONTARIO",
+        children: [
+          { market: "METRO ONTARIO" },
+          { market: "FOOD BASICS ONTARIO" },
+        ],
+      },
+      {
+        market: "METRO/SUPER C QUEBEC",
+        children: [
+          { market: "METRO QUEBEC" },
+          { market: "SUPER C QUEBEC" },
+        ],
+      },
+    ],
+  },
+  { market: "CANADIAN TIRE NATIONAL", kind: "account" },
+  { market: "SAVE ON FOODS WEST", kind: "account" },
+  { market: "FEDERATED COOP", kind: "account" },
 ];
 
 const state = {
@@ -226,6 +344,17 @@ const state = {
     "category:brand:Private Label",
     "category:brand:Starbucks",
     "category:brand:McCafe",
+  ]),
+  customerSummaryExpanded: new Set(),
+  customerDetailExpanded: new Set([
+    "customer:LCL NATIONAL",
+    "customer:Total RCSS",
+    "customer:LCL NATIONAL HARD DISCOUNT DIVISION",
+    "customer:SOBEYS INC NATIONAL INCL NFLD EX LAWTONS",
+    "customer:FRESHCO",
+    "customer:METRO INC GROCERY BANNERS",
+    "customer:METRO/FOOD BASICS ONTARIO",
+    "customer:METRO/SUPER C QUEBEC",
   ]),
   viewFilters: {},
 };
@@ -884,128 +1013,250 @@ function isChangeMetric(key) {
   return key.includes("Change") || key.includes("PctChange") || key.endsWith("PctChangeYa") || key === "dollarPctChangeYa";
 }
 
+function filterCategoryTreeBySource(nodes, source) {
+  if (source === "all") return nodes;
+  return nodes
+    .map((node) => {
+      const children = filterCategoryTreeBySource(node.children, source);
+      const rowMatches = node.row?.sourcePullType === source;
+      if (!rowMatches && !children.length) return null;
+      return {
+        ...node,
+        row: rowMatches ? node.row : null,
+        kind: rowMatches ? node.kind : "section",
+        children,
+      };
+    })
+    .filter(Boolean);
+}
+
 function renderCategoryDetail() {
   const source = activeFilters().categorySource;
-  const rows = state.data.views.category.rows.filter((row) => source === "all" || row.sourcePullType === source);
+  const tree = filterCategoryTreeBySource(categorySummaryTree(), source);
+  const rows = flattenCategoryTree(tree);
+  const sourceLabel = SOURCE_OPTIONS.find((option) => option.value === source)?.label || "All Pulls";
   return `
     <section class="view-strip">
       ${metricPill("Market", state.data.filters.market)}
-      ${metricPill("Rows", rows.length.toLocaleString())}
-      ${metricPill("Pull", SOURCE_OPTIONS.find((option) => option.value === source)?.label || "All Pulls")}
+      ${metricPill("Time Frame", state.data.filters.period)}
+      ${metricPill("Raw Pull", sourceLabel)}
     </section>
-    <section class="panel">
+    <section class="workbook-card">
       <header>
-        <h2>Category Detail</h2>
+        <h2>Coffee Category Detail</h2>
         <span>${escapeHtml(state.data.filters.market)} | ${escapeHtml(state.data.filters.period)}</span>
       </header>
-      ${detailTable(rows, "Product / Pack Group", true)}
+      ${categoryDetailTable(rows)}
     </section>
   `;
+}
+
+function categoryDetailTable(rows) {
+  if (!rows.length) return emptyPanel("No category detail rows for this filter.");
+  return `
+    <div class="workbook-table-wrap">
+      <table class="workbook-table category-detail-table">
+        <colgroup>
+          <col class="category-detail-brand-col">
+          <col class="category-detail-label-col">
+          ${DETAIL_METRIC_COLUMNS.map((column) => `<col class="workbook-metric-col ${escapeHtml(column.tone)}">`).join("")}
+        </colgroup>
+        <thead>
+          <tr class="workbook-group-row">
+            <th class="sticky-one" rowspan="2">Brand</th>
+            <th class="sticky-two" rowspan="2">All Manufacturers / Brands / Pack Groups</th>
+            ${DETAIL_METRIC_GROUPS.map((group) => `<th class="${escapeHtml(group.tone)}" colspan="${group.columns.length}">${escapeHtml(group.title)}</th>`).join("")}
+          </tr>
+          <tr class="workbook-column-row">
+            ${DETAIL_METRIC_COLUMNS.map((column) => `<th class="${escapeHtml(column.tone)}">${escapeHtml(column.label)}</th>`).join("")}
+          </tr>
+        </thead>
+        <tbody>
+          ${rows.map(categoryDetailRow).join("")}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+function categoryDetailRow(node) {
+  const expandable = node.children.length > 0;
+  return `
+    <tr class="workbook-row depth-${node.depth} category-${node.kind}">
+      <th class="sticky-one brand-name">${escapeHtml(categoryBrandLabel(node))}</th>
+      <th class="sticky-two hierarchy-label">
+        <span class="tree-indent" style="--depth:${node.depth}"></span>
+        ${
+          expandable
+            ? `<button class="tree-toggle" type="button" aria-expanded="${node.isExpanded ? "true" : "false"}" data-category-toggle="${escapeHtml(node.key)}">${node.isExpanded ? "-" : "+"}</button>`
+            : `<span class="tree-spacer"></span>`
+        }
+        <span>${escapeHtml(node.label)}</span>
+      </th>
+      ${DETAIL_METRIC_COLUMNS.map((column) => workbookMetricCell(node.row, column)).join("")}
+    </tr>
+  `;
+}
+
+function categoryBrandLabel(node) {
+  if (node.row?.brand) return node.row.brand;
+  if (node.kind === "brand" || node.kind === "otherBrand") return node.label;
+  return "";
 }
 
 function renderCustomerSummary() {
-  const rows = customerSummaryRows();
+  const rows = flattenCustomerTree(customerTree(), state.customerSummaryExpanded);
   return `
     <section class="view-strip">
       ${metricPill("Product", state.data.filters.product)}
-      ${metricPill("Rows", rows.length.toLocaleString())}
-      ${metricPill("Markets", state.data.filters.markets.length.toLocaleString())}
+      ${metricPill("Time Frame", state.data.filters.period)}
+      ${metricPill("Visible Rows", rows.length.toLocaleString())}
     </section>
-    <section class="panel">
+    <section class="workbook-card">
       <header>
-        <h2>Customer Scorecard</h2>
+        <h2>Coffee Customer Summary</h2>
         <span>${escapeHtml(state.data.filters.product)} | ${escapeHtml(state.data.filters.period)}</span>
       </header>
-      ${summaryTable(rows, "Market / Customer / Banner", false)}
+      ${customerSummaryTable(rows)}
     </section>
   `;
 }
 
-function customerSummaryRows() {
-  const rows = state.data.views.customer.rows;
-  return CUSTOMER_SUMMARY_MARKETS.map((market) => rows.find((row) => row.market === market)).filter(Boolean);
-}
-
 function renderCustomerDetail() {
-  const rows = state.data.views.customer.rows;
+  const rows = flattenCustomerTree(customerTree(), state.customerDetailExpanded);
   return `
     <section class="view-strip">
       ${metricPill("Product", state.data.filters.product)}
-      ${metricPill("Rows", rows.length.toLocaleString())}
       ${metricPill("Period", state.data.filters.period)}
+      ${metricPill("Visible Rows", rows.length.toLocaleString())}
     </section>
-    <section class="panel">
+    <section class="workbook-card">
       <header>
         <h2>Customer Detail</h2>
         <span>${escapeHtml(state.data.filters.product)} | ${escapeHtml(state.data.filters.period)}</span>
       </header>
-      ${detailTable(rows, "Market / Customer / Banner", false)}
+      ${customerDetailTable(rows)}
     </section>
   `;
 }
 
-function summaryTable(rows, labelHeader, showGroup) {
-  if (!rows.length) return emptyPanel("No rows for this filter.");
+function customerTree() {
+  const rows = state.data.views.customer.rows;
+  const lookup = new Map(rows.map((row) => [row.market, row]));
+  const knownMarkets = new Set();
+  collectCustomerMarkets(CUSTOMER_TREE, knownMarkets);
+  const core = CUSTOMER_TREE.map((definition) => customerNode(definition, lookup)).filter(Boolean);
+  const extras = rows
+    .filter((row) => row.market && !knownMarkets.has(row.market))
+    .sort((a, b) => (b.dollarSales000 || 0) - (a.dollarSales000 || 0))
+    .map((row) => ({ key: `customer:${row.market}`, label: row.market, row, kind: "extra", children: [] }));
+  return [...core, ...extras];
+}
+
+function collectCustomerMarkets(definitions, output) {
+  definitions.forEach((definition) => {
+    output.add(definition.market);
+    collectCustomerMarkets(definition.children || [], output);
+  });
+}
+
+function customerNode(definition, lookup) {
+  const children = (definition.children || []).map((child) => customerNode(child, lookup)).filter(Boolean);
+  const row = lookup.get(definition.market) || null;
+  if (!row && !children.length) return null;
+  return {
+    key: `customer:${definition.market}`,
+    label: definition.market,
+    row,
+    kind: definition.kind || (children.length ? "group" : "market"),
+    children,
+  };
+}
+
+function flattenCustomerTree(nodes, expandedSet, depth = 0) {
+  return nodes.flatMap((node) => {
+    const row = { ...node, depth, isExpanded: expandedSet.has(node.key) };
+    if (!row.isExpanded || !node.children.length) return [row];
+    return [row, ...flattenCustomerTree(node.children, expandedSet, depth + 1)];
+  });
+}
+
+function customerSummaryTable(rows) {
+  if (!rows.length) return emptyPanel("No customer rows for this product and time frame.");
   return `
-    <div class="table-wrap">
-      <table class="dense-table ${showGroup ? "grouped-table" : ""}">
+    <div class="workbook-table-wrap">
+      <table class="workbook-table customer-summary-table">
+        <colgroup>
+          <col class="customer-label-col">
+          ${CATEGORY_METRIC_COLUMNS.map((column) => `<col class="workbook-metric-col ${escapeHtml(column.tone)}">`).join("")}
+        </colgroup>
         <thead>
-          <tr>
-            ${showGroup ? "<th>Group</th>" : ""}
-            <th>${escapeHtml(labelHeader)}</th>
-            ${SUMMARY_COLUMNS.map((column) => `<th>${escapeHtml(column.label)}</th>`).join("")}
+          <tr class="workbook-group-row">
+            <th class="sticky-one" rowspan="2">All Markets / Customers / Banners</th>
+            ${CATEGORY_METRIC_GROUPS.map((group) => `<th class="${escapeHtml(group.tone)}" colspan="${group.columns.length}">${escapeHtml(group.title)}</th>`).join("")}
+          </tr>
+          <tr class="workbook-column-row">
+            ${CATEGORY_METRIC_COLUMNS.map((column) => `<th class="${escapeHtml(column.tone)}">${escapeHtml(column.label)}</th>`).join("")}
           </tr>
         </thead>
         <tbody>
-          ${rows.map((row) => summaryTableRow(row, showGroup)).join("")}
+          ${rows.map((node) => customerTableRow(node, CATEGORY_METRIC_COLUMNS, "summary")).join("")}
         </tbody>
       </table>
     </div>
   `;
 }
 
-function summaryTableRow(row, showGroup) {
+function customerDetailTable(rows) {
+  if (!rows.length) return emptyPanel("No customer detail rows for this product and time frame.");
   return `
-    <tr>
-      ${showGroup ? `<td>${escapeHtml(row.displayGroup || SOURCE_LABELS[row.sourcePullType] || "")}</td>` : ""}
-      <td>${escapeHtml(row.displayLabel || row.product || row.market)}</td>
-      ${SUMMARY_COLUMNS.map((column) => metricCell(row[column.key], column.format)).join("")}
-    </tr>
-  `;
-}
-
-function detailTable(rows, labelHeader, showSource) {
-  if (!rows.length) return emptyPanel("No detail rows for this filter.");
-  return `
-    <div class="table-wrap">
-      <table class="dense-table detail-table ${showSource ? "source-table" : ""}">
+    <div class="workbook-table-wrap">
+      <table class="workbook-table customer-detail-table">
+        <colgroup>
+          <col class="customer-label-col">
+          ${DETAIL_METRIC_COLUMNS.map((column) => `<col class="workbook-metric-col ${escapeHtml(column.tone)}">`).join("")}
+        </colgroup>
         <thead>
-          <tr>
-            <th>${escapeHtml(labelHeader)}</th>
-            ${showSource ? "<th>Pull</th>" : ""}
-            ${DETAIL_COLUMNS.map((column) => `<th>${escapeHtml(column.label)}</th>`).join("")}
+          <tr class="workbook-group-row">
+            <th class="sticky-one" rowspan="2">All Markets / Customers / Banners</th>
+            ${DETAIL_METRIC_GROUPS.map((group) => `<th class="${escapeHtml(group.tone)}" colspan="${group.columns.length}">${escapeHtml(group.title)}</th>`).join("")}
+          </tr>
+          <tr class="workbook-column-row">
+            ${DETAIL_METRIC_COLUMNS.map((column) => `<th class="${escapeHtml(column.tone)}">${escapeHtml(column.label)}</th>`).join("")}
           </tr>
         </thead>
         <tbody>
-          ${rows.map((row) => detailTableRow(row, showSource)).join("")}
+          ${rows.map((node) => customerTableRow(node, DETAIL_METRIC_COLUMNS, "detail")).join("")}
         </tbody>
       </table>
     </div>
   `;
 }
 
-function detailTableRow(row, showSource) {
+function customerTableRow(node, columns, scope) {
+  const expandable = node.children.length > 0;
+  const toggleAttribute = scope === "detail" ? "data-customer-detail-toggle" : "data-customer-summary-toggle";
   return `
-    <tr>
-      <td>${escapeHtml(row.product || row.market)}</td>
-      ${showSource ? `<td>${escapeHtml(SOURCE_LABELS[row.sourcePullType] || row.sourcePullType || "")}</td>` : ""}
-      ${DETAIL_COLUMNS.map((column) => metricCell(row[column.key], column.format)).join("")}
+    <tr class="workbook-row customer-${node.kind} depth-${node.depth}">
+      <th class="sticky-one hierarchy-label">
+        <span class="tree-indent" style="--depth:${node.depth}"></span>
+        ${
+          expandable
+            ? `<button class="tree-toggle" type="button" aria-expanded="${node.isExpanded ? "true" : "false"}" ${toggleAttribute}="${escapeHtml(node.key)}">${node.isExpanded ? "-" : "+"}</button>`
+            : `<span class="tree-spacer"></span>`
+        }
+        <span>${escapeHtml(node.label)}</span>
+      </th>
+      ${columns.map((column) => workbookMetricCell(node.row, column)).join("")}
     </tr>
   `;
 }
 
-function metricCell(value, formatter) {
-  return `<td class="${deltaClass(value)}">${escapeHtml(formatter(value))}</td>`;
+function workbookMetricCell(row, column) {
+  const value = row?.[column.key];
+  const change = isChangeMetric(column.key);
+  const className = change ? deltaClass(value) : "neutral";
+  return `<td class="${escapeHtml(column.tone)} ${change ? "change-metric" : ""} ${className}">${escapeHtml(column.format(value))}</td>`;
 }
 
 function metricPill(label, value) {
@@ -1114,6 +1365,20 @@ function bindInteractions() {
       render();
     });
   });
+
+  document.querySelectorAll("[data-customer-summary-toggle]").forEach((button) => {
+    button.addEventListener("click", () => {
+      toggleSetValue(state.customerSummaryExpanded, button.dataset.customerSummaryToggle);
+      render();
+    });
+  });
+
+  document.querySelectorAll("[data-customer-detail-toggle]").forEach((button) => {
+    button.addEventListener("click", () => {
+      toggleSetValue(state.customerDetailExpanded, button.dataset.customerDetailToggle);
+      render();
+    });
+  });
 }
 
 function bindFilter(id, reload = true) {
@@ -1127,6 +1392,15 @@ function bindFilter(id, reload = true) {
       render();
     }
   });
+}
+
+function toggleSetValue(set, value) {
+  if (!value) return;
+  if (set.has(value)) {
+    set.delete(value);
+  } else {
+    set.add(value);
+  }
 }
 
 async function loadDashboard() {

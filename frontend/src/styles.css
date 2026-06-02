@@ -1129,6 +1129,299 @@ tbody tr:hover td {
   background: #fff2e9;
 }
 
+.workbook-card {
+  background: #ffffff;
+  border: 1px solid #7b3a1a;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.workbook-card header {
+  align-items: center;
+  background: #ffffff;
+  border-bottom: 1px solid #7b3a1a;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  min-height: 46px;
+  padding: 10px 14px;
+}
+
+.workbook-card h2 {
+  color: #c8102e;
+  font-size: 1.45rem;
+  line-height: 1;
+  margin: 0;
+}
+
+.workbook-card header span {
+  background: #e4c3c4;
+  color: #432021;
+  font-size: 0.78rem;
+  font-weight: 820;
+  padding: 6px 10px;
+}
+
+.workbook-table-wrap {
+  background: #ffffff;
+  max-height: calc(100vh - 300px);
+  overflow: auto;
+  position: relative;
+}
+
+.workbook-table {
+  --sticky-one: 320px;
+  --sticky-two: 0px;
+  --workbook-head-1: 32px;
+  background: #ffffff;
+  border-collapse: separate;
+  border-spacing: 0;
+  table-layout: fixed;
+  width: 100%;
+}
+
+.category-detail-table {
+  --sticky-one: 160px;
+  --sticky-two: 300px;
+  min-width: 3772px;
+}
+
+.customer-summary-table {
+  min-width: 1850px;
+}
+
+.customer-detail-table {
+  min-width: 3632px;
+}
+
+.category-detail-brand-col {
+  width: 160px;
+}
+
+.category-detail-label-col {
+  width: 300px;
+}
+
+.customer-label-col {
+  width: 320px;
+}
+
+.workbook-metric-col {
+  width: 92px;
+}
+
+.workbook-table th,
+.workbook-table td {
+  border: 0;
+  border-bottom: 1px solid #a74d22;
+  border-right: 1px solid #a74d22;
+  font-size: 0.72rem;
+  line-height: 1.05;
+  min-width: 0;
+  padding: 4px 7px;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.workbook-table th:first-child,
+.workbook-table td:first-child {
+  min-width: 0;
+}
+
+.workbook-table thead th {
+  box-shadow: inset 0 1px 0 #a74d22;
+  color: #ffffff;
+  font-weight: 900;
+  position: sticky;
+  z-index: 5;
+}
+
+.workbook-table thead tr:first-child th {
+  top: 0;
+}
+
+.workbook-table thead tr:nth-child(2) th {
+  top: var(--workbook-head-1);
+}
+
+.workbook-table .sticky-one,
+.workbook-table .sticky-two {
+  position: sticky;
+  text-align: left;
+}
+
+.workbook-table .sticky-one {
+  left: 0;
+  width: var(--sticky-one);
+}
+
+.workbook-table .sticky-two {
+  left: var(--sticky-one);
+  width: var(--sticky-two);
+}
+
+.workbook-table thead .sticky-one,
+.workbook-table thead .sticky-two {
+  background: #5b2712;
+  box-shadow: inset 0 1px 0 #a74d22, 3px 0 0 #a74d22;
+  z-index: 8;
+}
+
+.workbook-table tbody .sticky-one,
+.workbook-table tbody .sticky-two {
+  background: #ffffff;
+  box-shadow: 3px 0 0 #a74d22;
+  color: #241f21;
+  z-index: 3;
+}
+
+.workbook-group-row th {
+  height: var(--workbook-head-1);
+  text-transform: uppercase;
+}
+
+.workbook-column-row th {
+  height: 58px;
+  white-space: normal;
+}
+
+.workbook-table th.topline,
+.workbook-table td.topline {
+  background-color: #fff9f5;
+}
+
+.workbook-table th.volume,
+.workbook-table td.volume {
+  background-color: #fbfaf7;
+}
+
+.workbook-table th.price,
+.workbook-table td.price,
+.workbook-table th.promotion,
+.workbook-table td.promotion {
+  background-color: #fff8f9;
+}
+
+.workbook-table th.distribution,
+.workbook-table td.distribution {
+  background-color: #f7f8f3;
+}
+
+.workbook-table th.velocity,
+.workbook-table td.velocity {
+  background-color: #f7f7f7;
+}
+
+.workbook-group-row th.topline,
+.workbook-column-row th.topline {
+  background: #9f451f;
+}
+
+.workbook-group-row th.volume,
+.workbook-column-row th.volume {
+  background: #85540d;
+}
+
+.workbook-group-row th.price,
+.workbook-column-row th.price {
+  background: #7b0718;
+}
+
+.workbook-group-row th.promotion,
+.workbook-column-row th.promotion {
+  background: #b10926;
+}
+
+.workbook-group-row th.distribution,
+.workbook-column-row th.distribution {
+  background: #4b4435;
+}
+
+.workbook-group-row th.velocity,
+.workbook-column-row th.velocity {
+  background: #777777;
+}
+
+.workbook-row th {
+  background: #ffffff;
+  color: #241f21;
+  font-weight: 800;
+}
+
+.workbook-row td {
+  color: #241f21;
+  font-variant-numeric: tabular-nums;
+}
+
+.workbook-row:hover th,
+.workbook-row:hover td {
+  background-color: #edf6f3 !important;
+}
+
+.workbook-row.category-total th,
+.workbook-row.category-brand th,
+.workbook-row.category-otherTotal th,
+.workbook-row.customer-total th {
+  background: #f8c8ce;
+  color: #241f21;
+  font-weight: 900;
+}
+
+.workbook-row.category-total td,
+.workbook-row.category-brand td,
+.workbook-row.category-otherTotal td,
+.workbook-row.customer-total td {
+  background-color: #ffdce0;
+  font-weight: 850;
+}
+
+.workbook-row.category-section th,
+.workbook-row.category-section td {
+  background: #fff5eb;
+  color: #5b2712;
+  font-weight: 850;
+}
+
+.workbook-row.category-segment th,
+.workbook-row.category-format th,
+.workbook-row.customer-national th,
+.workbook-row.customer-account th,
+.workbook-row.customer-group th {
+  font-weight: 880;
+}
+
+.workbook-row.customer-national th,
+.workbook-row.customer-account th {
+  background: #fff0f2;
+}
+
+.workbook-row.customer-group th,
+.workbook-row.category-format th {
+  background: #fff8ef;
+}
+
+.workbook-table .brand-name {
+  color: #5f5350;
+}
+
+.workbook-table .hierarchy-label > span:last-child {
+  vertical-align: middle;
+}
+
+.workbook-table .positive.change-metric {
+  color: #0d7a45 !important;
+  font-weight: 820;
+}
+
+.workbook-table .negative.change-metric {
+  color: #d91431 !important;
+  font-weight: 860;
+}
+
+.workbook-table .neutral.change-metric {
+  color: #5b5350 !important;
+}
+
 @keyframes pulse {
   from {
     opacity: 0.45;

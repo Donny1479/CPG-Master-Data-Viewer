@@ -291,6 +291,7 @@ function compactRow(row) {
     thBrand: row.th_brand,
     sourcePullType: row.source_pull_type,
     dollarSales000: numberValue(row.dollar_sales_000),
+    dollarSalesChangeYa000: numberValue(row.dollar_sales_chg_ya_000),
     dollarPctChangeYa: numberValue(row.dollar_pct_chg_ya),
     dollarShareProduct: numberValue(row.dollar_share_product),
     dollarShareChangeYa: numberValue(row.dollar_share_chg_ya_product),
