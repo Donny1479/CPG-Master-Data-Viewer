@@ -264,6 +264,7 @@ const CUSTOMER_TREE = [
     market: "NATIONAL DISCOUNT GDM",
     kind: "national",
     children: [
+      { market: "Discount Excluding Walmart" },
       { market: "ONTARIO DISCOUNT GDM" },
       { market: "QUEBEC DISCOUNT GDM" },
     ],
@@ -276,7 +277,7 @@ const CUSTOMER_TREE = [
       { market: "LCL NATIONAL MARKET DIVISION" },
       { market: "FORTINO'S" },
       {
-        market: "Total RCSS",
+        market: "TOTAL RCSS",
         children: [
           { market: "RCSS ONTARIO" },
           { market: "RCSS TOTAL WEST" },
@@ -347,8 +348,9 @@ const state = {
   ]),
   customerSummaryExpanded: new Set(),
   customerDetailExpanded: new Set([
+    "customer:NATIONAL DISCOUNT GDM",
     "customer:LCL NATIONAL",
-    "customer:Total RCSS",
+    "customer:TOTAL RCSS",
     "customer:LCL NATIONAL HARD DISCOUNT DIVISION",
     "customer:SOBEYS INC NATIONAL INCL NFLD EX LAWTONS",
     "customer:FRESHCO",
@@ -493,7 +495,7 @@ function appShell(config, content) {
       <aside class="sidebar">
         <div class="brand">
           <span>Tim Hortons CPG</span>
-          <strong>Insights Viewer</strong>
+          <strong>TimsIQ</strong>
         </div>
         <nav class="nav-list" aria-label="Dashboard views">
           ${VIEW_CONFIGS.map(navItem).join("")}
@@ -510,6 +512,7 @@ function appShell(config, content) {
             <h1>${escapeHtml(config.label)}</h1>
           </div>
           <div class="meta">
+            <span class="meta-brand">TimsIQ</span>
             <span>${escapeHtml(state.data?.filters?.period || activeFilters().period || "")}</span>
             <span>${state.data?.counts?.apiRowsLoaded?.toLocaleString() || "live"} API rows</span>
           </div>
@@ -1057,14 +1060,12 @@ function categoryDetailTable(rows) {
     <div class="workbook-table-wrap">
       <table class="workbook-table category-detail-table">
         <colgroup>
-          <col class="category-detail-brand-col">
           <col class="category-detail-label-col">
           ${DETAIL_METRIC_COLUMNS.map((column) => `<col class="workbook-metric-col ${escapeHtml(column.tone)}">`).join("")}
         </colgroup>
         <thead>
           <tr class="workbook-group-row">
-            <th class="sticky-one" rowspan="2">Brand</th>
-            <th class="sticky-two" rowspan="2">All Manufacturers / Brands / Pack Groups</th>
+            <th class="sticky-one" rowspan="2">Brand / Segment / Format</th>
             ${DETAIL_METRIC_GROUPS.map((group) => `<th class="${escapeHtml(group.tone)}" colspan="${group.columns.length}">${escapeHtml(group.title)}</th>`).join("")}
           </tr>
           <tr class="workbook-column-row">
@@ -1081,10 +1082,11 @@ function categoryDetailTable(rows) {
 
 function categoryDetailRow(node) {
   const expandable = node.children.length > 0;
+  const rawBrand = categoryBrandLabel(node);
+  const title = rawBrand && rawBrand !== node.label ? ` title="Brand: ${escapeHtml(rawBrand)}"` : "";
   return `
     <tr class="workbook-row depth-${node.depth} category-${node.kind}">
-      <th class="sticky-one brand-name">${escapeHtml(categoryBrandLabel(node))}</th>
-      <th class="sticky-two hierarchy-label">
+      <th class="sticky-one hierarchy-label"${title}>
         <span class="tree-indent" style="--depth:${node.depth}"></span>
         ${
           expandable

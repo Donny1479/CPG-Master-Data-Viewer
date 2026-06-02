@@ -172,6 +172,13 @@ svg {
   padding: 8px 10px;
 }
 
+.meta .meta-brand {
+  background: #211c1d;
+  border-color: #3f2020;
+  color: #ffcf95;
+  font-weight: 900;
+}
+
 .toolbar {
   align-items: end;
   display: grid;
@@ -1181,9 +1188,12 @@ tbody tr:hover td {
 }
 
 .category-detail-table {
-  --sticky-one: 160px;
-  --sticky-two: 300px;
-  min-width: 3772px;
+  --sticky-one: 360px;
+  min-width: 3672px;
+}
+
+.category-detail-label-col {
+  width: 360px;
 }
 
 .customer-summary-table {
@@ -1192,14 +1202,6 @@ tbody tr:hover td {
 
 .customer-detail-table {
   min-width: 3632px;
-}
-
-.category-detail-brand-col {
-  width: 160px;
-}
-
-.category-detail-label-col {
-  width: 300px;
 }
 
 .customer-label-col {
