@@ -426,8 +426,17 @@ select {
   background: #ffffff;
   border-collapse: separate;
   border-spacing: 0;
-  min-width: 1500px;
+  table-layout: fixed;
+  min-width: 1594px;
   width: 100%;
+}
+
+.scorecard-label-col {
+  width: 250px;
+}
+
+.scorecard-metric-col {
+  width: 96px;
 }
 
 .scorecard-table th,
@@ -442,10 +451,9 @@ select {
   white-space: normal;
 }
 
-.scorecard-table th:first-child,
-.scorecard-table td:first-child {
-  min-width: 230px;
+.scorecard-table .sticky-col {
   text-align: left;
+  width: 250px;
 }
 
 .scorecard-table thead th {
@@ -466,18 +474,17 @@ select {
   top: calc(var(--score-head-1) + var(--score-head-2));
 }
 
-.scorecard-table thead th:first-child,
-.scorecard-table tbody th:first-child {
+.scorecard-table .sticky-col {
   left: 0;
   position: sticky;
 }
 
-.scorecard-table thead th:first-child {
+.scorecard-table thead .sticky-col {
   box-shadow: inset 0 1px 0 #312626, 3px 0 0 #312626;
   z-index: 8;
 }
 
-.scorecard-table tbody th:first-child {
+.scorecard-table tbody .sticky-col {
   box-shadow: 3px 0 0 #312626;
   z-index: 3;
 }
@@ -713,6 +720,12 @@ td:first-child {
   text-align: left;
 }
 
+.scorecard-table thead th:not(.sticky-col),
+.category-summary-table thead th:not(.sticky-col) {
+  min-width: 0;
+  text-align: center;
+}
+
 .overview-table th:nth-child(2),
 .overview-table td:nth-child(2) {
   min-width: 170px;
@@ -900,8 +913,17 @@ tbody tr:hover td {
   background: #ffffff;
   border-collapse: separate;
   border-spacing: 0;
-  min-width: 1740px;
+  table-layout: fixed;
+  min-width: 1782px;
   width: 100%;
+}
+
+.category-label-col {
+  width: 320px;
+}
+
+.category-metric-col {
+  width: 86px;
 }
 
 .category-summary-table th,
@@ -932,21 +954,20 @@ tbody tr:hover td {
   top: var(--category-head-1);
 }
 
-.category-summary-table thead th:first-child,
-.category-summary-table tbody th:first-child {
+.category-summary-table .sticky-col {
   left: 0;
-  min-width: 300px;
   position: sticky;
   text-align: left;
+  width: 320px;
 }
 
-.category-summary-table thead th:first-child {
+.category-summary-table thead .sticky-col {
   background: #5b2712;
   box-shadow: inset 0 1px 0 #a74d22, 3px 0 0 #a74d22;
   z-index: 8;
 }
 
-.category-summary-table tbody th:first-child {
+.category-summary-table tbody .sticky-col {
   background: #ffffff;
   box-shadow: 3px 0 0 #a74d22;
   color: #241f21;

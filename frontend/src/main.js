@@ -508,15 +508,19 @@ function dashboardScorecard(sections, overview) {
   return `
     <div class="scorecard-wrap">
       <table class="scorecard-table">
+        <colgroup>
+          <col class="scorecard-label-col">
+          ${Array.from({ length: 14 }, () => `<col class="scorecard-metric-col">`).join("")}
+        </colgroup>
         <thead>
           <tr class="scorecard-group-row">
-            <th></th>
+            <th class="sticky-col"></th>
             <th colspan="3">Development</th>
             <th colspan="5">Performance</th>
             <th colspan="6">Casuals</th>
           </tr>
           <tr class="scorecard-subhead-row">
-            <th rowspan="2">Key Manufacturers / Brands / Pack Groups</th>
+            <th class="sticky-col" rowspan="2">Key Manufacturers / Brands / Pack Groups</th>
             <th colspan="2">$ Shr - Product</th>
             <th>Index</th>
             <th>$ (000)</th>
@@ -554,7 +558,7 @@ function dashboardSection(section) {
   const [totalRow, ...detailRows] = section.rows;
   return `
     <tr class="section-total">
-      <th>${escapeHtml(section.title)}</th>
+      <th class="sticky-col">${escapeHtml(section.title)}</th>
       ${dashboardMetricCells(totalRow)}
     </tr>
     ${detailRows.map((row) => dashboardRow(row)).join("")}
@@ -564,7 +568,7 @@ function dashboardSection(section) {
 function dashboardRow(row) {
   return `
     <tr class="${row.kind === "brand" ? "brand-row" : ""}">
-      <th>${escapeHtml(row.label)}</th>
+      <th class="sticky-col">${escapeHtml(row.label)}</th>
       ${dashboardMetricCells(row)}
     </tr>
   `;
@@ -830,9 +834,13 @@ function categorySummaryTable(rows) {
   return `
     <div class="category-table-wrap">
       <table class="category-summary-table">
+        <colgroup>
+          <col class="category-label-col">
+          ${CATEGORY_METRIC_COLUMNS.map((column) => `<col class="category-metric-col ${escapeHtml(column.tone)}">`).join("")}
+        </colgroup>
         <thead>
           <tr class="category-group-row">
-            <th rowspan="2">Brand / Segment / Format</th>
+            <th class="sticky-col" rowspan="2">Brand / Segment / Format</th>
             ${CATEGORY_METRIC_GROUPS.map((group) => `<th class="${escapeHtml(group.tone)}" colspan="${group.columns.length}">${escapeHtml(group.title)}</th>`).join("")}
           </tr>
           <tr class="category-column-row">
@@ -851,7 +859,7 @@ function categorySummaryRow(node) {
   const expandable = node.children.length > 0;
   return `
     <tr class="category-row depth-${node.depth} ${node.kind}">
-      <th>
+      <th class="sticky-col">
         <span class="tree-indent" style="--depth:${node.depth}"></span>
         ${
           expandable
