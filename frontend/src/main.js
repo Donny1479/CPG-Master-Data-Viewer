@@ -160,6 +160,7 @@ function defaultFilters(config) {
     period: config.defaultPeriod || "",
     product: config.defaultProduct || "Tim Hortons",
     categorySource: "all",
+    competitorMode: "aggregate",
   };
 }
 
@@ -380,25 +381,29 @@ function optionControl(id, label, options, value) {
 function renderOverview() {
   const data = state.data;
   const overview = data.views.overview;
-  const tims = data.kpis.tims;
+  const filters = activeFilters();
+  const showBrands = filters.competitorMode === "brands";
+  const sections = showBrands ? overview.brandSections || overview.sections : overview.sections;
 
   return `
-    <section class="kpi-grid">
-      ${kpiTile("Tim Hortons Sales", moneyMillions(tims?.dollarSales000), tims?.dollarPctChangeYa, "sales", `${percent(tims?.dollarPctChangeYa)} vs YA`)}
-      ${kpiTile("Dollar Share", percent(tims?.dollarShareProduct), tims?.dollarShareChangeYa, "share", `${pointChange(tims?.dollarShareChangeYa)} pts vs YA`)}
-      ${kpiTile("Avg Unit Price", currency(tims?.avgUnitsPrice), tims?.avgUnitsPriceChangeYa, "price", `${pointChange(tims?.avgUnitsPriceChangeYa)} vs YA`)}
-      ${kpiTile("Promotion Mix", percent(tims?.soldOnPromoPct), tims?.soldOnPromoChangeYaPct, "promo", `${pointChange(tims?.soldOnPromoChangeYaPct)} pts vs YA`)}
+    <section class="dashboard-actions">
+      <div class="dashboard-context">
+        ${metricPill("Target", overview.targetMarket)}
+        ${metricPill("Benchmark", overview.benchmarkMarket)}
+        ${metricPill("Time Frame", overview.period)}
+      </div>
+      <label class="switch-control">
+        <input id="competitorMode" type="checkbox" ${showBrands ? "checked" : ""}>
+        <span class="switch-track" aria-hidden="true"><span></span></span>
+        <strong>Specific competitor brands</strong>
+      </label>
     </section>
-    <section class="panel">
+    <section class="excel-scorecard">
       <header>
         <h2>${escapeHtml(overview.title)}</h2>
-        <span>${escapeHtml(overview.targetMarket)} vs ${escapeHtml(overview.benchmarkMarket)}</span>
+        <span>${showBrands ? "Competitive brands expanded" : "Competitive brands aggregated"}</span>
       </header>
-      ${overviewTable(overview.sections)}
-    </section>
-    <section class="grid two lower">
-      ${panel("Top Brand Sales", state.data.filters.period, `<div class="bars">${renderBarRows(state.data.brandLeaders, "dollarSales000")}</div>`)}
-      ${panel("Tim Hortons Formats", state.data.filters.market, `<div class="bars accent">${renderBarRows(state.data.formatBreakdown, "dollarSales000")}</div>`)}
+      ${dashboardScorecard(sections, overview)}
     </section>
   `;
 }
@@ -416,66 +421,116 @@ function kpiTile(title, value, delta, iconName, caption) {
   `;
 }
 
-function overviewTable(sections) {
-  const rows = sections.flatMap((section) =>
-    section.rows.map((row) => ({
-      section: section.title,
-      ...row,
-    })),
-  );
-
+function dashboardScorecard(sections, overview) {
   return `
-    <div class="table-wrap">
-      <table class="dense-table overview-table">
+    <div class="scorecard-wrap">
+      <table class="scorecard-table">
         <thead>
-          <tr>
-            <th>Section</th>
-            <th>Segment</th>
-            <th>Target Share</th>
-            <th>Benchmark Share</th>
+          <tr class="scorecard-group-row">
+            <th></th>
+            <th colspan="3">Development</th>
+            <th colspan="5">Performance</th>
+            <th colspan="6">Casuals</th>
+          </tr>
+          <tr class="scorecard-subhead-row">
+            <th rowspan="2">Key Manufacturers / Brands / Pack Groups</th>
+            <th colspan="2">$ Shr - Product</th>
             <th>Index</th>
-            <th>Target $</th>
-            <th>Target $ Chg</th>
-            <th>Benchmark $</th>
-            <th>Benchmark $ Chg</th>
+            <th>$ (000)</th>
+            <th>$ % Chg YA</th>
+            <th>$ (000)</th>
+            <th>$ % Chg YA</th>
             <th>Delta</th>
-            <th>Target Price Chg</th>
-            <th>Target Promo Chg</th>
-            <th>Target ACV Chg</th>
-            <th>Benchmark Price Chg</th>
-            <th>Benchmark Promo Chg</th>
-            <th>Benchmark ACV Chg</th>
+            <th>Avg Units Price Chg YA</th>
+            <th>% Sold on Promo Chg YA</th>
+            <th>% ACV % Chg YA</th>
+            <th>Avg Units Price Chg YA</th>
+            <th>% Sold on Promo Chg YA</th>
+            <th>% ACV % Chg YA</th>
+          </tr>
+          <tr class="scorecard-market-row">
+            <th>${escapeHtml(overview.targetMarket)}</th>
+            <th>${escapeHtml(overview.benchmarkMarket)}</th>
+            <th>Index</th>
+            <th colspan="2">${escapeHtml(overview.targetMarket)}</th>
+            <th colspan="2">${escapeHtml(overview.benchmarkMarket)}</th>
+            <th>% Chg</th>
+            <th colspan="3">${escapeHtml(overview.targetMarket)}</th>
+            <th colspan="3">${escapeHtml(overview.benchmarkMarket)}</th>
           </tr>
         </thead>
         <tbody>
-          ${rows.map(overviewTableRow).join("")}
+          ${sections.map(dashboardSection).join("")}
         </tbody>
       </table>
     </div>
   `;
 }
 
-function overviewTableRow(row) {
+function dashboardSection(section) {
+  const [totalRow, ...detailRows] = section.rows;
+  return `
+    <tr class="section-total">
+      <th>${escapeHtml(section.title)}</th>
+      ${dashboardMetricCells(totalRow)}
+    </tr>
+    ${detailRows.map((row) => dashboardRow(row)).join("")}
+  `;
+}
+
+function dashboardRow(row) {
+  return `
+    <tr class="${row.kind === "brand" ? "brand-row" : ""}">
+      <th>${escapeHtml(row.label)}</th>
+      ${dashboardMetricCells(row)}
+    </tr>
+  `;
+}
+
+function dashboardMetricCells(row) {
   const m = row.metrics;
   return `
-    <tr>
-      <td>${escapeHtml(row.section)}</td>
-      <td>${escapeHtml(row.label)}</td>
-      <td>${percent(m.targetShare)}</td>
-      <td>${percent(m.benchmarkShare)}</td>
-      <td class="${deltaClass((m.shareIndex || 0) - 100)}">${indexValue(m.shareIndex)}</td>
-      <td>${money000(m.targetSales000)}</td>
-      <td class="${deltaClass(m.targetSalesPctChangeYa)}">${percent(m.targetSalesPctChangeYa)}</td>
-      <td>${money000(m.benchmarkSales000)}</td>
-      <td class="${deltaClass(m.benchmarkSalesPctChangeYa)}">${percent(m.benchmarkSalesPctChangeYa)}</td>
-      <td class="${deltaClass(m.salesPctChangeDelta)}">${pointChange(m.salesPctChangeDelta)}</td>
-      <td class="${deltaClass(m.targetAvgUnitsPriceChangeYa)}">${pointChange(m.targetAvgUnitsPriceChangeYa)}</td>
-      <td class="${deltaClass(m.targetSoldOnPromoChangeYaPct)}">${pointChange(m.targetSoldOnPromoChangeYaPct)}</td>
-      <td class="${deltaClass(m.targetAcvPctChangeYa)}">${percent(m.targetAcvPctChangeYa)}</td>
-      <td class="${deltaClass(m.benchmarkAvgUnitsPriceChangeYa)}">${pointChange(m.benchmarkAvgUnitsPriceChangeYa)}</td>
-      <td class="${deltaClass(m.benchmarkSoldOnPromoChangeYaPct)}">${pointChange(m.benchmarkSoldOnPromoChangeYaPct)}</td>
-      <td class="${deltaClass(m.benchmarkAcvPctChangeYa)}">${percent(m.benchmarkAcvPctChangeYa)}</td>
-    </tr>
+    ${plainCell(percent(m.targetShare))}
+    ${plainCell(percent(m.benchmarkShare))}
+    ${indexCell(m.shareIndex)}
+    ${plainCell(wholeNumber(m.targetSales000))}
+    ${trendCell(m.targetSalesPctChangeYa, percent)}
+    ${plainCell(wholeNumber(m.benchmarkSales000))}
+    ${trendCell(m.benchmarkSalesPctChangeYa, percent)}
+    ${trendCell(m.salesPctChangeDelta, percent)}
+    ${trendCell(m.targetAvgUnitsPriceChangeYa, currency)}
+    ${trendCell(m.targetSoldOnPromoChangeYaPct, percent)}
+    ${trendCell(m.targetAcvPctChangeYa, percent)}
+    ${trendCell(m.benchmarkAvgUnitsPriceChangeYa, currency)}
+    ${trendCell(m.benchmarkSoldOnPromoChangeYaPct, percent)}
+    ${trendCell(m.benchmarkAcvPctChangeYa, percent)}
+  `;
+}
+
+function wholeNumber(value) {
+  if (value == null) return "n/a";
+  return value.toLocaleString(undefined, {
+    maximumFractionDigits: 0,
+    minimumFractionDigits: 0,
+  });
+}
+
+function plainCell(value) {
+  return `<td>${escapeHtml(value)}</td>`;
+}
+
+function indexCell(value) {
+  const className = value == null ? "neutral" : value < 85 ? "index-low" : value > 115 ? "index-high" : "index-neutral";
+  return `<td class="index-cell ${className}">${escapeHtml(indexValue(value))}</td>`;
+}
+
+function trendCell(value, formatter) {
+  const direction = value == null || Math.abs(value) < 0.05 ? "flat" : value > 0 ? "up" : "down";
+  return `
+    <td class="trend-cell ${direction}">
+      <span class="trend-marker ${direction}" aria-hidden="true"></span>
+      <span>${escapeHtml(formatter(value))}</span>
+    </td>
   `;
 }
 
@@ -721,6 +776,12 @@ function bindInteractions() {
   bindFilter("period");
   bindFilter("product");
   bindFilter("categorySource", false);
+
+  const competitorMode = document.querySelector("#competitorMode");
+  competitorMode?.addEventListener("change", (event) => {
+    activeFilters().competitorMode = event.target.checked ? "brands" : "aggregate";
+    render();
+  });
 }
 
 function bindFilter(id, reload = true) {

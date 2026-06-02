@@ -11,7 +11,12 @@ const DEFAULT_CUSTOMER_PRODUCT = "Tim Hortons";
 const OVERVIEW_SECTIONS = [
   {
     id: "coffee",
-    title: "Coffee",
+    title: "Total Coffee",
+    pullType: "topline_brands",
+    totalProduct: "Packaged Coffee & Instant Coffee",
+    timsProduct: "Tim Hortons",
+    competitiveProduct: "Competitive Brands",
+    privateLabelProduct: "Private Label",
     rows: [
       { label: "Packaged Coffee & Instant Coffee", product: "Packaged Coffee & Instant Coffee", pullType: "topline_brands" },
       { label: "Tim Hortons", product: "Tim Hortons", pullType: "topline_brands" },
@@ -22,6 +27,11 @@ const OVERVIEW_SECTIONS = [
   {
     id: "rg",
     title: "R&G",
+    pullType: "rg",
+    totalProduct: "R&G",
+    timsProduct: "Tim Hortons R&G",
+    competitiveProduct: "Competitive Brands R&G",
+    privateLabelProduct: "Private Label R&G",
     rows: [
       { label: "R&G", product: "R&G", pullType: "rg" },
       { label: "Tim Hortons", product: "Tim Hortons R&G", pullType: "rg" },
@@ -32,6 +42,11 @@ const OVERVIEW_SECTIONS = [
   {
     id: "singleServe",
     title: "Single Serve",
+    pullType: "single_serve",
+    totalProduct: "Single Serve",
+    timsProduct: "Tim Hortons Single Serve",
+    competitiveProduct: "Competitive Brands Single Serve",
+    privateLabelProduct: "Private Label Single Serve",
     rows: [
       { label: "Single Serve", product: "Single Serve", pullType: "single_serve" },
       { label: "Tim Hortons", product: "Tim Hortons Single Serve", pullType: "single_serve" },
@@ -42,6 +57,11 @@ const OVERVIEW_SECTIONS = [
   {
     id: "instant",
     title: "Instant Coffee",
+    pullType: "instant",
+    totalProduct: "Instant Coffee",
+    timsProduct: "Tim Hortons Instant Coffee",
+    competitiveProduct: "Competitive Brands Instant Coffee",
+    privateLabelProduct: "Private Label Instant Coffee",
     rows: [
       { label: "Instant Coffee", product: "Instant Coffee", pullType: "instant" },
       { label: "Tim Hortons", product: "Tim Hortons Instant Coffee", pullType: "instant" },
@@ -341,6 +361,7 @@ function overviewRow(allRows, spec, targetMarket, benchmarkMarket, period) {
     label: spec.label,
     product: spec.product,
     sourcePullType: spec.pullType,
+    kind: spec.kind || "aggregate",
     target: compactRow(target),
     benchmark: compactRow(benchmark),
     metrics: {
@@ -366,8 +387,96 @@ function overviewSections(allRows, targetMarket, benchmarkMarket, period) {
   return OVERVIEW_SECTIONS.map((section) => ({
     id: section.id,
     title: section.title,
+    pullType: section.pullType,
     rows: section.rows.map((row) => overviewRow(allRows, row, targetMarket, benchmarkMarket, period)),
   }));
+}
+
+function cleanOverviewBrandLabel(product, section) {
+  const suffixes = {
+    rg: " R&G",
+    singleServe: " Single Serve",
+    instant: " Instant Coffee",
+  };
+  const suffix = suffixes[section.id];
+  if (suffix && product.endsWith(suffix)) {
+    return product.slice(0, -suffix.length);
+  }
+  return product;
+}
+
+function isExpandedCompetitorRow(row, section) {
+  if (row.source_pull_type !== section.pullType || !row.product) return false;
+
+  const product = row.product;
+  const excluded = new Set([
+    section.totalProduct,
+    section.timsProduct,
+    section.competitiveProduct,
+    section.privateLabelProduct,
+  ]);
+  if (excluded.has(product)) return false;
+  if (product.startsWith("Tim Hortons") || product.startsWith("Private Label") || product.startsWith("Competitive Brands")) {
+    return false;
+  }
+
+  if (section.id === "coffee") {
+    return !new Set(["Packaged Coffee", "Instant Coffee", "All Other Brands"]).has(product);
+  }
+  if (section.id === "rg") {
+    return product.endsWith(" R&G") && product !== "Club Format R&G";
+  }
+  if (section.id === "singleServe") {
+    return product.endsWith(" Single Serve");
+  }
+  if (section.id === "instant") {
+    return product.endsWith(" Instant Coffee");
+  }
+  return false;
+}
+
+function expandedCompetitorSpecs(allRows, section, targetMarket, benchmarkMarket, period) {
+  const byProduct = new Map();
+  for (const row of allRows) {
+    if (row.period !== period || (row.market !== targetMarket && row.market !== benchmarkMarket)) continue;
+    if (!isExpandedCompetitorRow(row, section)) continue;
+
+    const record = byProduct.get(row.product) || { product: row.product, targetSales: null, benchmarkSales: null };
+    if (row.market === targetMarket) {
+      record.targetSales = numberValue(row.dollar_sales_000);
+    }
+    if (row.market === benchmarkMarket) {
+      record.benchmarkSales = numberValue(row.dollar_sales_000);
+    }
+    byProduct.set(row.product, record);
+  }
+
+  return [...byProduct.values()]
+    .sort((a, b) => (b.targetSales ?? b.benchmarkSales ?? 0) - (a.targetSales ?? a.benchmarkSales ?? 0))
+    .map((row) => ({
+      label: cleanOverviewBrandLabel(row.product, section),
+      product: row.product,
+      pullType: section.pullType,
+      kind: "brand",
+    }));
+}
+
+function expandedOverviewSections(allRows, targetMarket, benchmarkMarket, period) {
+  return OVERVIEW_SECTIONS.map((section) => {
+    const rows = [
+      { label: section.totalProduct, product: section.totalProduct, pullType: section.pullType, kind: "total" },
+      { label: "Tim Hortons", product: section.timsProduct, pullType: section.pullType, kind: "tims" },
+      ...expandedCompetitorSpecs(allRows, section, targetMarket, benchmarkMarket, period),
+      { label: "Private Label", product: section.privateLabelProduct, pullType: section.pullType, kind: "privateLabel" },
+    ];
+
+    return {
+      id: section.id,
+      title: section.title,
+      pullType: section.pullType,
+      rows: rows.map((row) => overviewRow(allRows, row, targetMarket, benchmarkMarket, period)),
+    };
+  });
 }
 
 function customerMarketOrder(row) {
@@ -532,6 +641,7 @@ function dashboardPayload(
         benchmarkMarket,
         period,
         sections: overviewSections(allRows, market, benchmarkMarket, period),
+        brandSections: expandedOverviewSections(allRows, market, benchmarkMarket, period),
       },
       category: {
         market,

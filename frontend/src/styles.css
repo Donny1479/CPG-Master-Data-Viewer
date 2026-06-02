@@ -316,6 +316,281 @@ select {
   white-space: nowrap;
 }
 
+.dashboard-actions {
+  align-items: stretch;
+  display: grid;
+  gap: 14px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  margin-bottom: 14px;
+}
+
+.dashboard-context {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.switch-control {
+  align-items: center;
+  background: #ffffff;
+  border: 1px solid #ddd5cb;
+  border-radius: 8px;
+  color: #241f21;
+  display: flex;
+  gap: 10px;
+  min-height: 76px;
+  padding: 12px 14px;
+  white-space: nowrap;
+}
+
+.switch-control input {
+  height: 1px;
+  opacity: 0;
+  position: absolute;
+  width: 1px;
+}
+
+.switch-control strong {
+  font-size: 0.88rem;
+}
+
+.switch-track {
+  background: #d8d0c7;
+  border-radius: 999px;
+  display: inline-flex;
+  height: 24px;
+  padding: 3px;
+  transition: background 0.18s ease;
+  width: 46px;
+}
+
+.switch-track span {
+  background: #ffffff;
+  border-radius: 999px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.22);
+  height: 18px;
+  transform: translateX(0);
+  transition: transform 0.18s ease;
+  width: 18px;
+}
+
+.switch-control input:checked + .switch-track {
+  background: #0f7a79;
+}
+
+.switch-control input:checked + .switch-track span {
+  transform: translateX(22px);
+}
+
+.excel-scorecard {
+  background: #ffffff;
+  border: 1px solid #3f2020;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.excel-scorecard header {
+  align-items: center;
+  background: #432021;
+  color: #ffffff;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  min-height: 40px;
+  padding: 8px 12px;
+}
+
+.excel-scorecard h2 {
+  font-size: 1rem;
+  margin: 0;
+}
+
+.excel-scorecard header span {
+  color: #f3ddc4;
+  font-size: 0.78rem;
+  font-weight: 760;
+}
+
+.scorecard-wrap {
+  overflow: auto;
+}
+
+.scorecard-table {
+  border-collapse: collapse;
+  min-width: 1500px;
+  width: 100%;
+}
+
+.scorecard-table th,
+.scorecard-table td {
+  border: 1px solid #312626;
+  font-size: 0.74rem;
+  padding: 5px 7px;
+  position: static;
+  text-align: center;
+  white-space: normal;
+}
+
+.scorecard-table th:first-child,
+.scorecard-table td:first-child {
+  min-width: 230px;
+  text-align: left;
+}
+
+.scorecard-group-row th {
+  background: #432021;
+  color: #ffffff;
+  font-size: 0.74rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.scorecard-subhead-row th {
+  background: #d9d9d9;
+  color: #241f21;
+  font-size: 0.7rem;
+  font-weight: 900;
+  line-height: 1.1;
+}
+
+.scorecard-market-row th {
+  background: #d91431;
+  color: #ffffff;
+  font-size: 0.68rem;
+  font-weight: 900;
+  line-height: 1.1;
+}
+
+.scorecard-market-row th:nth-child(4),
+.scorecard-market-row th:nth-child(5),
+.scorecard-market-row th:nth-child(6) {
+  background: #efc58b;
+  color: #211c1d;
+}
+
+.scorecard-market-row th:nth-child(7),
+.scorecard-market-row th:nth-child(8) {
+  background: #c3791c;
+  color: #ffffff;
+}
+
+.scorecard-table tbody th {
+  background: #ffffff;
+  color: #241f21;
+  font-weight: 760;
+}
+
+.scorecard-table tbody td {
+  background: #ffffff;
+  color: #241f21;
+  font-variant-numeric: tabular-nums;
+}
+
+.scorecard-table tbody tr:hover th,
+.scorecard-table tbody tr:hover td {
+  background: #fff8ef;
+}
+
+.scorecard-table .section-total th,
+.scorecard-table .section-total td {
+  background: #432021;
+  color: #ffffff;
+  font-weight: 900;
+}
+
+.scorecard-table .brand-row th {
+  color: #5f5350;
+  padding-left: 22px;
+}
+
+.index-cell {
+  font-weight: 900;
+}
+
+.index-low {
+  background: #ffc7d1 !important;
+  color: #b21b25 !important;
+}
+
+.index-high {
+  background: #cfe9d9 !important;
+  color: #0d7a45 !important;
+}
+
+.index-neutral {
+  background: #ffffff;
+  color: #241f21;
+}
+
+.section-total .index-neutral {
+  background: #432021;
+  color: #ffffff;
+}
+
+.trend-cell {
+  gap: 5px;
+  justify-content: center;
+  white-space: nowrap !important;
+}
+
+.trend-cell span:last-child {
+  display: inline-block;
+  min-width: 44px;
+  text-align: right;
+}
+
+.trend-marker {
+  display: inline-block;
+  height: 14px;
+  position: relative;
+  vertical-align: middle;
+  width: 14px;
+}
+
+.trend-marker.up::before,
+.trend-marker.down::before {
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  content: "";
+  left: 2px;
+  position: absolute;
+}
+
+.trend-marker.up::before {
+  border-bottom: 10px solid #0d7a45;
+  top: 1px;
+}
+
+.trend-marker.down::before {
+  border-top: 10px solid #c63724;
+  top: 3px;
+}
+
+.trend-marker.flat::before {
+  background: #c6922f;
+  content: "";
+  height: 4px;
+  left: 1px;
+  position: absolute;
+  top: 6px;
+  width: 12px;
+}
+
+.scorecard-table tbody tr:not(.section-total) .trend-cell.up {
+  background: #eef8f2;
+  color: #0d7a45;
+}
+
+.scorecard-table tbody tr:not(.section-total) .trend-cell.down {
+  background: #fff1f0;
+  color: #b21b25;
+}
+
+.scorecard-table tbody tr:not(.section-total) .trend-cell.flat {
+  background: #fff8e4;
+  color: #6d5415;
+}
+
 .panel {
   min-height: 360px;
   overflow: hidden;
@@ -545,8 +820,13 @@ tbody tr:hover td {
   .toolbar,
   .kpi-grid,
   .view-strip,
+  .dashboard-context,
   .grid.two {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .dashboard-actions {
+    grid-template-columns: 1fr;
   }
 }
 
@@ -580,9 +860,15 @@ tbody tr:hover td {
   .toolbar,
   .kpi-grid,
   .view-strip,
+  .dashboard-context,
   .grid.two,
   .loading-grid {
     grid-template-columns: 1fr;
+  }
+
+  .switch-control {
+    justify-content: space-between;
+    min-height: 58px;
   }
 
   .panel header {
