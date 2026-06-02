@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 from datetime import UTC, datetime
 from itertools import islice
 from pathlib import Path
@@ -81,10 +82,39 @@ def main() -> None:
 
     rows = iter_compiled_pull_rows(paths, import_run_id=import_run_id, limit=args.limit)
     imported = 0
+    markets: set[str] = set()
+    periods: set[str] = set()
+    products: set[str] = set()
+    source_counts: dict[str, int] = {}
     for batch in chunks(rows, config.bulk_batch_size):
+        for row in batch:
+            if row.get("market"):
+                markets.add(str(row["market"]))
+            if row.get("period"):
+                periods.add(str(row["period"]))
+            if row.get("product"):
+                products.add(str(row["product"]))
+            pull_type = str(row.get("source_pull_type") or "unknown")
+            source_counts[pull_type] = source_counts.get(pull_type, 0) + 1
+
         client.upsert_rows(config.database_id, config.scorecard_table_id, batch)
         imported += len(batch)
-        print(f"Imported {imported} rows")
+        if imported % 1000 == 0:
+            print(f"Imported {imported} rows")
+
+    metadata_json = json.dumps(
+        {
+            "source": "nielsen_raw_tabs",
+            "rowCount": imported,
+            "sourceCounts": source_counts,
+            "options": {
+                "markets": sorted(markets),
+                "periods": sorted(periods),
+                "products": sorted(products),
+            },
+        },
+        separators=(",", ":"),
+    )
 
     client.upsert_row(
         config.database_id,
@@ -100,9 +130,19 @@ def main() -> None:
         },
         config.table_permissions,
     )
+    client.upsert_row(
+        config.database_id,
+        config.import_metadata_table_id,
+        import_run_id,
+        {
+            "import_run_id": import_run_id,
+            "row_count": imported,
+            "metadata_json": metadata_json,
+        },
+        config.table_permissions,
+    )
     print(f"Import complete: {imported} rows")
 
 
 if __name__ == "__main__":
     main()
-

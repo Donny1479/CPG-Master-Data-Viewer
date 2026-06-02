@@ -44,6 +44,7 @@ class AppConfig:
     database_id: str
     scorecard_table_id: str
     import_runs_table_id: str
+    import_metadata_table_id: str
     table_permissions: list[str]
     bulk_batch_size: int
 
@@ -59,7 +60,7 @@ class AppConfig:
             database_id=_optional("APPWRITE_DATABASE_ID", "tim_cpg_insights"),
             scorecard_table_id=_optional("APPWRITE_SCORECARD_TABLE_ID", "scorecard_rows"),
             import_runs_table_id=_optional("APPWRITE_IMPORT_RUNS_TABLE_ID", "import_runs"),
+            import_metadata_table_id=_optional("APPWRITE_IMPORT_METADATA_TABLE_ID", "import_metadata"),
             table_permissions=_permissions(os.environ.get("APPWRITE_TABLE_PERMISSIONS", "")),
             bulk_batch_size=int(_optional("APPWRITE_BULK_BATCH_SIZE", "100")),
         )
-

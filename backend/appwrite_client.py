@@ -2,8 +2,10 @@ from __future__ import annotations
 
 import json
 import ssl
+import time
+from http.client import RemoteDisconnected
 from typing import Any
-from urllib.error import HTTPError
+from urllib.error import HTTPError, URLError
 from urllib.parse import quote
 from urllib.request import Request, urlopen
 
@@ -18,6 +20,8 @@ class AppwriteError(RuntimeError):
 
 
 class AppwriteClient:
+    RETRYABLE_STATUS_CODES = {408, 429, 500, 502, 503, 504}
+
     def __init__(self, config: AppConfig):
         self.config = config
         self.ssl_context = self._ssl_context()
@@ -41,23 +45,35 @@ class AppwriteClient:
 
         url = f"{self.config.endpoint}/{path.lstrip('/')}"
         req = Request(url, data=body, headers=headers, method=method.upper())
-        try:
-            with urlopen(req, timeout=120, context=self.ssl_context) as response:
-                data = response.read()
-                if response.status not in expected_statuses:
-                    raise AppwriteError(response.status, data.decode("utf-8", errors="replace"))
-                if not data:
-                    return None
-                return json.loads(data.decode("utf-8"))
-        except HTTPError as exc:
-            raw = exc.read().decode("utf-8", errors="replace")
+        for attempt in range(5):
             try:
-                payload = json.loads(raw)
-                message = payload.get("message", raw)
-            except json.JSONDecodeError:
-                payload = None
-                message = raw
-            raise AppwriteError(exc.code, message, payload) from exc
+                with urlopen(req, timeout=120, context=self.ssl_context) as response:
+                    data = response.read()
+                    if response.status not in expected_statuses:
+                        raise AppwriteError(response.status, data.decode("utf-8", errors="replace"))
+                    if not data:
+                        return None
+                    return json.loads(data.decode("utf-8"))
+            except HTTPError as exc:
+                raw = exc.read().decode("utf-8", errors="replace")
+                try:
+                    payload = json.loads(raw)
+                    message = payload.get("message", raw)
+                except json.JSONDecodeError:
+                    payload = None
+                    message = raw
+
+                if exc.code in self.RETRYABLE_STATUS_CODES and attempt < 4:
+                    self._sleep_before_retry(attempt)
+                    continue
+                raise AppwriteError(exc.code, message, payload) from exc
+            except (RemoteDisconnected, TimeoutError, URLError, ConnectionError) as exc:
+                if attempt < 4:
+                    self._sleep_before_retry(attempt)
+                    continue
+                raise AppwriteError(0, str(exc)) from exc
+
+        raise AppwriteError(0, "Appwrite request failed after retries")
 
     def get_database(self, database_id: str) -> dict[str, Any] | None:
         return self._get_or_none(f"tablesdb/{quote(database_id)}")
@@ -168,6 +184,10 @@ class AppwriteClient:
             if exc.status_code == 404:
                 return None
             raise
+
+    @staticmethod
+    def _sleep_before_retry(attempt: int) -> None:
+        time.sleep(min(2**attempt, 10))
 
     @staticmethod
     def _ssl_context() -> ssl.SSLContext:

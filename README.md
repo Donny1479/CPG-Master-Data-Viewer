@@ -37,6 +37,7 @@ APPWRITE_API_KEY=<server-side API key>
 APPWRITE_DATABASE_ID=tim_cpg_insights
 APPWRITE_SCORECARD_TABLE_ID=scorecard_rows
 APPWRITE_IMPORT_RUNS_TABLE_ID=import_runs
+APPWRITE_IMPORT_METADATA_TABLE_ID=import_metadata
 ```
 
 Vercel can use the checked-in `vercel.json` from the repository root:
@@ -96,3 +97,5 @@ You can also pass one Nielsen export workbook if it contains all four tabs. The 
 - R&G
 
 It then normalizes `NUMBER OF PACKETS` to `SIZE`, builds the dashboard `Products` field, filters out Nielsen footer rows, and appends the four pulls into one scorecard row stream.
+
+The importer also writes compact dashboard metadata to `import_metadata` so the Vercel API can populate dropdowns without scanning the full scorecard table on every request.

@@ -5,6 +5,7 @@ from typing import Any
 DATABASE_NAME = "Tim Hortons CPG Insights"
 SCORECARD_TABLE_NAME = "Scorecard Rows"
 IMPORT_RUNS_TABLE_NAME = "Import Runs"
+IMPORT_METADATA_TABLE_NAME = "Import Metadata"
 
 EXCEL_TO_APPWRITE_COLUMN = {
     "Markets": "market",
@@ -134,4 +135,14 @@ IMPORT_RUN_COLUMNS = [
 IMPORT_RUN_INDEXES = [
     {"key": "idx_file_sha256", "type": "key", "attributes": ["file_sha256"]},
     {"key": "idx_status", "type": "key", "attributes": ["status"]},
+]
+
+IMPORT_METADATA_COLUMNS = [
+    string_column("import_run_id", 36, True),
+    integer_column("row_count"),
+    string_column("metadata_json", 8192, True),
+]
+
+IMPORT_METADATA_INDEXES = [
+    {"key": "idx_import_run", "type": "key", "attributes": ["import_run_id"]},
 ]
