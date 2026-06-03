@@ -113,10 +113,18 @@ function requiredEnv(name) {
   return value;
 }
 
+function requiredAnyEnv(names) {
+  for (const name of names) {
+    const value = process.env[name];
+    if (value) return value;
+  }
+  throw new Error(`Missing environment variable: ${names[0]}`);
+}
+
 function config() {
   return {
-    endpoint: requiredEnv("APPWRITE_ENDPOINT").replace(/\/$/, ""),
-    projectId: requiredEnv("APPWRITE_PROJECT_ID"),
+    endpoint: requiredAnyEnv(["APPWRITE_ENDPOINT", "VITE_APPWRITE_ENDPOINT"]).replace(/\/$/, ""),
+    projectId: requiredAnyEnv(["APPWRITE_PROJECT_ID", "VITE_APPWRITE_PROJECT_ID"]),
     apiKey: requiredEnv("APPWRITE_API_KEY"),
     databaseId: process.env.APPWRITE_DATABASE_ID || DEFAULT_DATABASE_ID,
     scorecardTableId: process.env.APPWRITE_SCORECARD_TABLE_ID || DEFAULT_SCORECARD_TABLE_ID,

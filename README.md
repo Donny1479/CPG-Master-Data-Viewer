@@ -31,6 +31,7 @@ The dashboard frontend lives in `frontend/` and is configured for Vercel. It use
 Required Vercel environment variables:
 
 ```text
+# Server-side API route. Keep APPWRITE_API_KEY private.
 APPWRITE_ENDPOINT=https://tor.cloud.appwrite.io/v1
 APPWRITE_PROJECT_ID=6a1ddc28001802029c80
 APPWRITE_API_KEY=<server-side API key>
@@ -39,9 +40,12 @@ APPWRITE_SCORECARD_TABLE_ID=scorecard_rows
 APPWRITE_IMPORT_RUNS_TABLE_ID=import_runs
 APPWRITE_IMPORT_METADATA_TABLE_ID=import_metadata
 
+# Browser login page. These are public client config values.
 VITE_APPWRITE_ENDPOINT=https://tor.cloud.appwrite.io/v1
 VITE_APPWRITE_PROJECT_ID=6a1ddc28001802029c80
 ```
+
+`APPWRITE_ENDPOINT`/`APPWRITE_PROJECT_ID` can also fall back to the matching `VITE_` values, but keeping both pairs in Vercel makes the configuration easier to audit.
 
 Vercel can use the checked-in `vercel.json` from the repository root:
 
