@@ -57,14 +57,17 @@ Vercel can use the checked-in `vercel.json` from the repository root:
 ## Login Setup
 
 The frontend uses Appwrite Auth for email/password login. The `/api/dashboard` route also validates an Appwrite JWT before returning dashboard data.
+The login form displays `Username` and resolves it to the Appwrite user's email before creating the Appwrite session. A username can be the Appwrite user's `name`, the email prefix before `@`, or the full email address.
 
 To create logins:
 
 1. In Appwrite Console, open project `6a1ddc28001802029c80`.
 2. Go to `Auth` > `Settings` and ensure `Email/Password` is enabled.
 3. Go to `Auth` > `Users` > `Create user`.
-4. Enter the team member name, email, and a temporary password.
-5. Give that email/password to the user; they can sign in on the TimsIQ login page.
+4. Enter the team member username in `Name`, their email, and a temporary password.
+5. Give that username/password to the user; they can sign in on the TimsIQ login page.
+
+The server-side `APPWRITE_API_KEY` must include permission to read/list users, because `/api/resolve-user` maps usernames to Appwrite emails before login.
 
 To allow the deployed site to use Appwrite Auth:
 

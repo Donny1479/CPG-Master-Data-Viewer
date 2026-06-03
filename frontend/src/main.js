@@ -558,8 +558,8 @@ function loginView() {
             <h1>Sign In</h1>
           </div>
           <label>
-            <span>Email</span>
-            <input name="email" type="email" autocomplete="email" required ${disabled ? "disabled" : ""}>
+            <span>Username</span>
+            <input name="username" type="text" autocomplete="username" required ${disabled ? "disabled" : ""}>
           </label>
           <label>
             <span>Password</span>
@@ -1388,15 +1388,16 @@ function bindAuthInteractions() {
   form?.addEventListener("submit", async (event) => {
     event.preventDefault();
     const formData = new FormData(form);
-    const email = String(formData.get("email") || "").trim();
+    const username = String(formData.get("username") || "").trim();
     const password = String(formData.get("password") || "");
-    if (!email || !password) return;
+    if (!username || !password) return;
 
     state.auth.submitting = true;
     state.auth.error = null;
     render();
 
     try {
+      const email = await resolveLoginEmail(username);
       await account.createEmailPasswordSession({ email, password });
       state.auth.user = await account.get();
       state.auth.submitting = false;
@@ -1409,6 +1410,24 @@ function bindAuthInteractions() {
       render();
     }
   });
+}
+
+async function resolveLoginEmail(username) {
+  if (username.includes("@")) return username;
+
+  const response = await fetch("/api/resolve-user", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ username }),
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(payload.detail || payload.error || "Username not found.");
+  }
+  if (!payload.email) {
+    throw new Error("Username not found.");
+  }
+  return payload.email;
 }
 
 async function initializeAuth() {
@@ -1460,7 +1479,13 @@ function authErrorMessage(error) {
     return `Cannot reach Appwrite from ${window.location.hostname}. Add this hostname as an Appwrite Web platform, then redeploy with the VITE_APPWRITE_* environment variables.`;
   }
   if (message.toLowerCase().includes("invalid credentials")) {
-    return "The email or password is incorrect.";
+    return "The username or password is incorrect.";
+  }
+  if (message.toLowerCase().includes("username not found")) {
+    return "The username or password is incorrect.";
+  }
+  if (message.toLowerCase().includes("users lookup failed") || message.toLowerCase().includes("unable to resolve username")) {
+    return "Username login is not fully configured. Make sure the Appwrite API key has users read access.";
   }
   return message || "Unable to sign in.";
 }
