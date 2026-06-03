@@ -1,4 +1,11 @@
+import { Account, Client } from "appwrite";
+import logoUrl from "./assets/timsiq-logo.png";
 import "./styles.css";
+
+const APPWRITE_ENDPOINT = import.meta.env.VITE_APPWRITE_ENDPOINT || "https://tor.cloud.appwrite.io/v1";
+const APPWRITE_PROJECT_ID = import.meta.env.VITE_APPWRITE_PROJECT_ID || "6a1ddc28001802029c80";
+const appwriteClient = new Client().setEndpoint(APPWRITE_ENDPOINT).setProject(APPWRITE_PROJECT_ID);
+const account = new Account(appwriteClient);
 
 const VIEW_CONFIGS = [
   {
@@ -338,6 +345,12 @@ const state = {
   data: null,
   loading: true,
   error: null,
+  auth: {
+    checking: true,
+    submitting: false,
+    user: null,
+    error: null,
+  },
   categoryExpanded: new Set([
     "category:all",
     "category:all:packaged",
@@ -465,6 +478,12 @@ function escapeHtml(value) {
 }
 
 function render() {
+  if (state.auth.checking || !state.auth.user) {
+    app.innerHTML = loginView();
+    bindAuthInteractions();
+    return;
+  }
+
   const config = viewConfig();
 
   if (state.loading) {
@@ -494,8 +513,8 @@ function appShell(config, content) {
     <div class="app-frame">
       <aside class="sidebar">
         <div class="brand">
+          <img class="brand-logo" src="${logoUrl}" alt="TimsIQ">
           <span>Tim Hortons CPG</span>
-          <strong>TimsIQ</strong>
         </div>
         <nav class="nav-list" aria-label="Dashboard views">
           ${VIEW_CONFIGS.map(navItem).join("")}
@@ -512,14 +531,47 @@ function appShell(config, content) {
             <h1>${escapeHtml(config.label)}</h1>
           </div>
           <div class="meta">
-            <span class="meta-brand">TimsIQ</span>
+            <span class="meta-logo-pill"><img src="${logoUrl}" alt="TimsIQ"></span>
             <span>${escapeHtml(state.data?.filters?.period || activeFilters().period || "")}</span>
             <span>${state.data?.counts?.apiRowsLoaded?.toLocaleString() || "live"} API rows</span>
+            <button class="logout-button" id="logoutButton" type="button">Sign Out</button>
           </div>
         </header>
         ${content}
       </main>
     </div>
+  `;
+}
+
+function loginView() {
+  const disabled = state.auth.checking || state.auth.submitting;
+  return `
+    <main class="login-shell">
+      <section class="login-hero" aria-label="TimsIQ">
+        <img src="${logoUrl}" alt="TimsIQ">
+      </section>
+      <section class="login-panel">
+        <form class="login-card" id="loginForm">
+          <img class="login-logo" src="${logoUrl}" alt="TimsIQ">
+          <div class="login-copy">
+            <span>Tim Hortons CPG</span>
+            <h1>Sign In</h1>
+          </div>
+          <label>
+            <span>Email</span>
+            <input name="email" type="email" autocomplete="email" required ${disabled ? "disabled" : ""}>
+          </label>
+          <label>
+            <span>Password</span>
+            <input name="password" type="password" autocomplete="current-password" required ${disabled ? "disabled" : ""}>
+          </label>
+          ${state.auth.error ? `<p class="login-error">${escapeHtml(state.auth.error)}</p>` : ""}
+          <button class="login-button" type="submit" ${disabled ? "disabled" : ""}>
+            ${state.auth.checking ? "Checking session" : state.auth.submitting ? "Signing in" : "Sign In"}
+          </button>
+        </form>
+      </section>
+    </main>
   `;
 }
 
@@ -1331,6 +1383,85 @@ function emptyPanel(message) {
   return `<div class="empty">${escapeHtml(message)}</div>`;
 }
 
+function bindAuthInteractions() {
+  const form = document.querySelector("#loginForm");
+  form?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const formData = new FormData(form);
+    const email = String(formData.get("email") || "").trim();
+    const password = String(formData.get("password") || "");
+    if (!email || !password) return;
+
+    state.auth.submitting = true;
+    state.auth.error = null;
+    render();
+
+    try {
+      await account.createEmailPasswordSession({ email, password });
+      state.auth.user = await account.get();
+      state.auth.submitting = false;
+      state.loading = true;
+      await loadDashboard();
+    } catch (error) {
+      state.auth.submitting = false;
+      state.auth.user = null;
+      state.auth.error = authErrorMessage(error);
+      render();
+    }
+  });
+}
+
+async function initializeAuth() {
+  render();
+  try {
+    state.auth.user = await account.get();
+    state.auth.error = null;
+    state.auth.checking = false;
+    state.loading = true;
+    await loadDashboard();
+  } catch {
+    state.auth.user = null;
+    state.auth.checking = false;
+    state.loading = false;
+    render();
+  }
+}
+
+async function signOut() {
+  try {
+    await account.deleteSession({ sessionId: "current" });
+  } catch {
+    // The local UI should still reset if the server-side session is already gone.
+  }
+  state.auth.user = null;
+  state.auth.error = null;
+  state.data = null;
+  state.error = null;
+  state.loading = false;
+  render();
+}
+
+async function dashboardAuthHeaders() {
+  try {
+    const token = await account.createJWT();
+    return {
+      Authorization: `Bearer ${token.jwt}`,
+    };
+  } catch (error) {
+    state.auth.user = null;
+    state.auth.error = "Your session expired. Sign in again.";
+    throw error;
+  }
+}
+
+function authErrorMessage(error) {
+  const message = error instanceof Error ? error.message : String(error);
+  if (message.toLowerCase().includes("invalid credentials")) {
+    return "The email or password is incorrect.";
+  }
+  return message || "Unable to sign in.";
+}
+
 function bindInteractions() {
   document.querySelectorAll("[data-view]").forEach((button) => {
     button.addEventListener("click", () => {
@@ -1364,22 +1495,26 @@ function bindInteractions() {
       } else {
         state.categoryExpanded.add(key);
       }
-      render();
+      renderPreservingTableScroll();
     });
   });
 
   document.querySelectorAll("[data-customer-summary-toggle]").forEach((button) => {
     button.addEventListener("click", () => {
       toggleSetValue(state.customerSummaryExpanded, button.dataset.customerSummaryToggle);
-      render();
+      renderPreservingTableScroll();
     });
   });
 
   document.querySelectorAll("[data-customer-detail-toggle]").forEach((button) => {
     button.addEventListener("click", () => {
       toggleSetValue(state.customerDetailExpanded, button.dataset.customerDetailToggle);
-      render();
+      renderPreservingTableScroll();
     });
+  });
+
+  document.querySelector("#logoutButton")?.addEventListener("click", () => {
+    signOut();
   });
 }
 
@@ -1405,6 +1540,28 @@ function toggleSetValue(set, value) {
   }
 }
 
+function activeTableScroller() {
+  return document.querySelector(".workbook-table-wrap, .category-table-wrap, .scorecard-wrap");
+}
+
+function renderPreservingTableScroll() {
+  const scroller = activeTableScroller();
+  const snapshot = scroller
+    ? { top: scroller.scrollTop, left: scroller.scrollLeft, windowX: window.scrollX, windowY: window.scrollY }
+    : { top: 0, left: 0, windowX: window.scrollX, windowY: window.scrollY };
+
+  render();
+
+  requestAnimationFrame(() => {
+    const nextScroller = activeTableScroller();
+    if (nextScroller) {
+      nextScroller.scrollTop = snapshot.top;
+      nextScroller.scrollLeft = snapshot.left;
+    }
+    window.scrollTo(snapshot.windowX, snapshot.windowY);
+  });
+}
+
 async function loadDashboard() {
   state.error = null;
   if (!state.data) state.loading = true;
@@ -1421,12 +1578,18 @@ async function loadDashboard() {
 
   try {
     const query = params.toString();
-    const response = await fetch(`/api/dashboard${query ? `?${query}` : ""}`);
+    const response = await fetch(`/api/dashboard${query ? `?${query}` : ""}`, {
+      headers: await dashboardAuthHeaders(),
+    });
     const contentType = response.headers.get("content-type") || "";
     const payload = contentType.includes("application/json")
       ? await response.json()
       : { detail: await response.text() };
     if (!response.ok) {
+      if (response.status === 401) {
+        state.auth.user = null;
+        state.auth.error = payload.detail || "Please sign in again.";
+      }
       throw new Error(payload.detail || payload.error || response.statusText);
     }
 
@@ -1439,11 +1602,13 @@ async function loadDashboard() {
       product: payload.filters.product,
     };
   } catch (error) {
-    state.error = error instanceof Error ? error.message : String(error);
+    if (state.auth.user) {
+      state.error = error instanceof Error ? error.message : String(error);
+    }
   } finally {
     state.loading = false;
     render();
   }
 }
 
-loadDashboard();
+initializeAuth();

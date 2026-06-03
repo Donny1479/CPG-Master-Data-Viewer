@@ -54,8 +54,16 @@ svg {
 .sidebar .brand {
   border-bottom: 1px solid rgba(255, 255, 255, 0.14);
   display: grid;
-  gap: 6px;
+  gap: 8px;
   padding: 0 8px 18px;
+}
+
+.brand-logo {
+  display: block;
+  height: 74px;
+  object-fit: contain;
+  object-position: left center;
+  width: 182px;
 }
 
 .sidebar .brand span {
@@ -172,11 +180,37 @@ svg {
   padding: 8px 10px;
 }
 
-.meta .meta-brand {
+.meta .meta-logo-pill {
+  align-items: center;
   background: #211c1d;
   border-color: #3f2020;
-  color: #ffcf95;
-  font-weight: 900;
+  display: flex;
+  height: 44px;
+  justify-content: center;
+  padding: 4px 9px;
+  width: 134px;
+}
+
+.meta-logo-pill img {
+  display: block;
+  height: 34px;
+  max-width: 116px;
+  object-fit: contain;
+}
+
+.logout-button {
+  background: #ffffff;
+  border: 1px solid #ddd5cb;
+  border-radius: 8px;
+  color: #5b5350;
+  font-size: 0.86rem;
+  min-height: 38px;
+  padding: 0 11px;
+}
+
+.logout-button:hover {
+  border-color: #b21b25;
+  color: #8b1e26;
 }
 
 .toolbar {
@@ -876,6 +910,138 @@ tbody tr:hover td {
   height: 320px;
 }
 
+.login-shell {
+  background: #f7f4ef;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(360px, 440px);
+  min-height: 100vh;
+}
+
+.login-hero {
+  align-items: center;
+  background:
+    linear-gradient(90deg, rgba(33, 28, 29, 0.96), rgba(67, 32, 33, 0.88)),
+    #211c1d;
+  display: flex;
+  justify-content: center;
+  min-width: 0;
+  overflow: hidden;
+  padding: 48px;
+}
+
+.login-hero img {
+  display: block;
+  max-height: 360px;
+  max-width: min(760px, 82vw);
+  object-fit: contain;
+  width: 100%;
+}
+
+.login-panel {
+  align-items: center;
+  display: flex;
+  justify-content: center;
+  padding: 32px;
+}
+
+.login-card {
+  background: #ffffff;
+  border: 1px solid #ddd5cb;
+  border-radius: 8px;
+  display: grid;
+  gap: 16px;
+  max-width: 380px;
+  padding: 28px;
+  width: 100%;
+}
+
+.login-logo {
+  display: block;
+  height: 82px;
+  object-fit: contain;
+  object-position: left center;
+  width: 180px;
+}
+
+.login-copy {
+  display: grid;
+  gap: 5px;
+}
+
+.login-copy span {
+  color: #8b1e26;
+  font-size: 0.76rem;
+  font-weight: 900;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.login-copy h1 {
+  font-size: 2rem;
+  line-height: 1;
+  margin: 0;
+}
+
+.login-card label {
+  display: grid;
+  gap: 6px;
+}
+
+.login-card label span {
+  color: #6f625f;
+  font-size: 0.78rem;
+  font-weight: 820;
+}
+
+input {
+  background: #ffffff;
+  border: 1px solid #d9d0c6;
+  border-radius: 8px;
+  color: #241f21;
+  font: inherit;
+  min-height: 44px;
+  padding: 0 12px;
+  width: 100%;
+}
+
+input:focus {
+  border-color: #8b1e26;
+  outline: 3px solid rgba(178, 27, 37, 0.14);
+}
+
+input:disabled {
+  background: #f2ede7;
+}
+
+.login-error {
+  background: #fff1f0;
+  border: 1px solid #f0c1bc;
+  border-radius: 8px;
+  color: #9b1c1f;
+  font-size: 0.84rem;
+  margin: 0;
+  padding: 10px 12px;
+}
+
+.login-button {
+  background: #b21b25;
+  border: 1px solid #b21b25;
+  border-radius: 8px;
+  color: #ffffff;
+  font-weight: 900;
+  min-height: 46px;
+}
+
+.login-button:hover:not(:disabled) {
+  background: #8b1e26;
+  border-color: #8b1e26;
+}
+
+.login-button:disabled {
+  cursor: wait;
+  opacity: 0.72;
+}
+
 .category-summary-card {
   background: #ffffff;
   border: 1px solid #7b3a1a;
@@ -1473,6 +1639,19 @@ tbody tr:hover td {
   .topbar {
     align-items: start;
     flex-direction: column;
+  }
+
+  .login-shell {
+    display: block;
+  }
+
+  .login-hero {
+    min-height: 220px;
+    padding: 28px;
+  }
+
+  .login-panel {
+    padding: 20px 16px 32px;
   }
 
   .meta {

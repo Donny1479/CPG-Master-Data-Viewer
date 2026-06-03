@@ -38,6 +38,9 @@ APPWRITE_DATABASE_ID=tim_cpg_insights
 APPWRITE_SCORECARD_TABLE_ID=scorecard_rows
 APPWRITE_IMPORT_RUNS_TABLE_ID=import_runs
 APPWRITE_IMPORT_METADATA_TABLE_ID=import_metadata
+
+VITE_APPWRITE_ENDPOINT=https://tor.cloud.appwrite.io/v1
+VITE_APPWRITE_PROJECT_ID=6a1ddc28001802029c80
 ```
 
 Vercel can use the checked-in `vercel.json` from the repository root:
@@ -46,6 +49,25 @@ Vercel can use the checked-in `vercel.json` from the repository root:
 - Build Command: `cd frontend && npm run build`
 - Output Directory: `frontend/dist`
 - Framework Preset: `Vite`
+
+## Login Setup
+
+The frontend uses Appwrite Auth for email/password login. The `/api/dashboard` route also validates an Appwrite JWT before returning dashboard data.
+
+To create logins:
+
+1. In Appwrite Console, open project `6a1ddc28001802029c80`.
+2. Go to `Auth` > `Settings` and ensure `Email/Password` is enabled.
+3. Go to `Auth` > `Users` > `Create user`.
+4. Enter the team member name, email, and a temporary password.
+5. Give that email/password to the user; they can sign in on the TimsIQ login page.
+
+To allow the deployed site to use Appwrite Auth:
+
+1. In Appwrite Console, go to `Project` > `Platforms`.
+2. Add a `Web` platform for each hostname that will use the login page.
+3. Add your production Vercel hostname, any custom domain, and `localhost` for local development.
+4. In Vercel, set `VITE_APPWRITE_ENDPOINT` and `VITE_APPWRITE_PROJECT_ID` for Production and Preview along with the server-side Appwrite variables above.
 
 ## Inspect The Current Reference Workbook
 

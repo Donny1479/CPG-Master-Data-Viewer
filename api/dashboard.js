@@ -75,11 +75,12 @@ const CUSTOMER_MARKET_ORDER = [
   "NATIONAL EX NFLD GDM",
   "NATIONAL CONVENTIONAL GDM",
   "NATIONAL DISCOUNT GDM",
+  "Discount Excluding Walmart",
   "LCL NATIONAL",
   "LCL NATIONAL SUPERMARKETS DIV",
   "LCL NATIONAL MARKET DIVISION",
   "FORTINO'S",
-  "Total RCSS",
+  "TOTAL RCSS",
   "RCSS ONTARIO",
   "RCSS TOTAL WEST",
   "LCL NATIONAL HARD DISCOUNT DIVISION",
@@ -189,6 +190,33 @@ async function appwriteGetRow(cfg, tableId, rowId) {
     throw new Error(`Appwrite ${response.status}: ${body || response.statusText}`);
   }
   return normalizeRow(await response.json());
+}
+
+function bearerToken(request) {
+  const header = request.headers?.authorization || request.headers?.Authorization || "";
+  const match = String(header).match(/^Bearer\s+(.+)$/i);
+  return match ? match[1].trim() : "";
+}
+
+async function verifyAuthenticatedUser(cfg, request) {
+  const token = bearerToken(request);
+  if (!token) {
+    return { ok: false, status: 401, detail: "Sign in to view dashboard data." };
+  }
+
+  const response = await fetch(`${cfg.endpoint}/account`, {
+    headers: {
+      "X-Appwrite-Project": cfg.projectId,
+      "X-Appwrite-JWT": token,
+      "X-Appwrite-Response-Format": "1.9.5",
+    },
+  });
+
+  if (!response.ok) {
+    return { ok: false, status: 401, detail: "Your session expired. Sign in again." };
+  }
+
+  return { ok: true, user: await response.json() };
 }
 
 function normalizeRow(row) {
@@ -671,6 +699,15 @@ export default async function handler(request, response) {
 
   try {
     const cfg = config();
+    const auth = await verifyAuthenticatedUser(cfg, request);
+    if (!auth.ok) {
+      response.status(auth.status).json({
+        error: "Authentication required",
+        detail: auth.detail,
+      });
+      return;
+    }
+
     const importRuns = await fetchImportRuns(cfg);
     const requestedImportRunId = queryValue(request.query.importRunId);
     const selectedImportRun =
