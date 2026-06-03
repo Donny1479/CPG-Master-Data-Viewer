@@ -1456,6 +1456,9 @@ async function dashboardAuthHeaders() {
 
 function authErrorMessage(error) {
   const message = error instanceof Error ? error.message : String(error);
+  if (message.toLowerCase().includes("failed to fetch") || message.toLowerCase().includes("networkerror")) {
+    return `Cannot reach Appwrite from ${window.location.hostname}. Add this hostname as an Appwrite Web platform, then redeploy with the VITE_APPWRITE_* environment variables.`;
+  }
   if (message.toLowerCase().includes("invalid credentials")) {
     return "The email or password is incorrect.";
   }

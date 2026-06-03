@@ -69,6 +69,8 @@ To allow the deployed site to use Appwrite Auth:
 3. Add your production Vercel hostname, any custom domain, and `localhost` for local development.
 4. In Vercel, set `VITE_APPWRITE_ENDPOINT` and `VITE_APPWRITE_PROJECT_ID` for Production and Preview along with the server-side Appwrite variables above.
 
+If login says `Failed to fetch`, the browser is usually being blocked by Appwrite platform/CORS settings. Add the exact hostname shown in the browser address bar as an Appwrite `Web` platform. Use only the hostname, such as `timsiq.vercel.app`, not `https://timsiq.vercel.app/`.
+
 ## Inspect The Current Reference Workbook
 
 ```powershell
