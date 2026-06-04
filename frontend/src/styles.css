@@ -1560,6 +1560,36 @@ input:disabled {
   background-color: #ffffff;
 }
 
+.workbook-table .workbook-group-row th.topline {
+  background: #73505a;
+  color: #ffffff;
+}
+
+.workbook-table .workbook-group-row th.volume {
+  background: #587065;
+  color: #ffffff;
+}
+
+.workbook-table .workbook-group-row th.price {
+  background: #6e6387;
+  color: #ffffff;
+}
+
+.workbook-table .workbook-group-row th.promotion {
+  background: #8a4150;
+  color: #ffffff;
+}
+
+.workbook-table .workbook-group-row th.distribution {
+  background: #566d7c;
+  color: #ffffff;
+}
+
+.workbook-table .workbook-group-row th.velocity {
+  background: #686868;
+  color: #ffffff;
+}
+
 .workbook-column-row th.topline,
 .workbook-column-row th.volume,
 .workbook-column-row th.price,
