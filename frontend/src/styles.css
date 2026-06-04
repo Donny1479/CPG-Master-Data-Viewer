@@ -1344,6 +1344,15 @@ input:disabled {
   color: #5b5350 !important;
 }
 
+.category-summary-table tbody tr.category-total th,
+.category-summary-table tbody tr.category-total td,
+.category-summary-table tbody tr.category-total td *,
+.category-summary-table tbody tr.category-total .positive,
+.category-summary-table tbody tr.category-total .negative,
+.category-summary-table tbody tr.category-total .neutral {
+  color: #ffffff !important;
+}
+
 .tree-indent {
   display: inline-block;
   width: calc(var(--depth) * 18px);
@@ -1734,6 +1743,15 @@ input:disabled {
 
 .workbook-table .neutral.change-metric {
   color: #5b5350 !important;
+}
+
+.workbook-row.category-total th,
+.workbook-row.category-total td,
+.workbook-row.category-total td *,
+.workbook-row.category-total .positive,
+.workbook-row.category-total .negative,
+.workbook-row.category-total .neutral {
+  color: #ffffff !important;
 }
 
 .category-summary-table tbody tr:not(.category-total) td.metric-trend.up,
