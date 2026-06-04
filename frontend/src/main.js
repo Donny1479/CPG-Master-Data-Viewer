@@ -715,7 +715,6 @@ function renderExecutiveSummary() {
     <section class="view-strip">
       ${metricPill("Market", state.data.filters.market)}
       ${metricPill("Time Frame", state.data.filters.period)}
-      ${metricPill("Visible Rows", rows.length.toLocaleString())}
     </section>
     <section class="workbook-card executive-summary-card">
       <header>

@@ -1074,7 +1074,7 @@ input:disabled {
 
 .category-summary-card {
   background: #ffffff;
-  border: 1px solid #7b3a1a;
+  border: 1px solid #cfc6ba;
   border-radius: 8px;
   overflow: hidden;
 }
@@ -1082,7 +1082,7 @@ input:disabled {
 .category-summary-card header {
   align-items: center;
   background: #ffffff;
-  border-bottom: 1px solid #7b3a1a;
+  border-bottom: 1px solid #cfc6ba;
   display: flex;
   gap: 12px;
   justify-content: space-between;
@@ -1098,8 +1098,8 @@ input:disabled {
 }
 
 .category-summary-card header span {
-  background: #e4c3c4;
-  color: #432021;
+  background: #f2e9e6;
+  color: #4a3434;
   font-size: 0.78rem;
   font-weight: 820;
   padding: 6px 10px;
@@ -1132,8 +1132,8 @@ input:disabled {
 .category-summary-table th,
 .category-summary-table td {
   border: 0;
-  border-bottom: 1px solid #a74d22;
-  border-right: 1px solid #a74d22;
+  border-bottom: 1px solid #d6cdc3;
+  border-right: 1px solid #d6cdc3;
   font-size: 0.72rem;
   line-height: 1.05;
   padding: 4px 6px;
@@ -1145,20 +1145,20 @@ input:disabled {
 .category-summary-table td.metric-group-start,
 .workbook-table th.metric-group-start,
 .workbook-table td.metric-group-start {
-  border-left: 3px solid #312626 !important;
+  border-left: 3px solid #72605d !important;
 }
 
 .category-summary-table th.metric-subgroup-start,
 .category-summary-table td.metric-subgroup-start,
 .workbook-table th.metric-subgroup-start,
 .workbook-table td.metric-subgroup-start {
-  border-left: 2px solid rgba(49, 38, 38, 0.78) !important;
+  border-left: 2px solid #b7aaa0 !important;
 }
 
 .category-summary-table thead th {
   color: #ffffff;
   font-weight: 900;
-  box-shadow: inset 0 1px 0 #a74d22;
+  box-shadow: inset 0 1px 0 #d6cdc3;
   position: sticky;
   z-index: 5;
 }
@@ -1179,14 +1179,14 @@ input:disabled {
 }
 
 .category-summary-table thead .sticky-col {
-  background: #432021;
-  box-shadow: inset 0 1px 0 #a74d22, 3px 0 0 #a74d22;
+  background: #3b3032;
+  box-shadow: inset 0 1px 0 #d6cdc3, 3px 0 0 #72605d;
   z-index: 8;
 }
 
 .category-summary-table tbody .sticky-col {
   background: #ffffff;
-  box-shadow: 3px 0 0 #a74d22;
+  box-shadow: 3px 0 0 #72605d;
   color: #241f21;
   z-index: 3;
 }
@@ -1232,12 +1232,38 @@ input:disabled {
 }
 
 .category-group-row th.topline,
+.workbook-group-row th.topline {
+  background: #73505a;
+  color: #ffffff;
+}
+
 .category-group-row th.volume,
+.workbook-group-row th.volume {
+  background: #587065;
+  color: #ffffff;
+}
+
 .category-group-row th.price,
+.workbook-group-row th.price {
+  background: #6e6387;
+  color: #ffffff;
+}
+
 .category-group-row th.promotion,
+.workbook-group-row th.promotion {
+  background: #8a4150;
+  color: #ffffff;
+}
+
 .category-group-row th.distribution,
-.category-group-row th.velocity {
-  background: #432021;
+.workbook-group-row th.distribution {
+  background: #566d7c;
+  color: #ffffff;
+}
+
+.category-group-row th.velocity,
+.workbook-group-row th.velocity {
+  background: #686868;
   color: #ffffff;
 }
 
@@ -1257,33 +1283,42 @@ input:disabled {
 }
 
 .category-summary-table tbody tr.category-total th,
-.category-summary-table tbody tr.category-brand th,
-.category-summary-table tbody tr.category-otherTotal th {
-  background: #432021;
+.category-summary-table tbody tr.category-total td {
+  background: #3b3032;
   color: #ffffff;
   font-weight: 900;
 }
 
-.category-summary-table tbody tr.category-total td,
+.category-summary-table tbody tr.category-brand th,
+.category-summary-table tbody tr.category-otherTotal th {
+  background: #f0e5e2;
+  color: #241f21;
+  font-weight: 900;
+}
+
 .category-summary-table tbody tr.category-brand td,
 .category-summary-table tbody tr.category-otherTotal td {
-  background-color: #432021;
-  color: #ffffff !important;
+  background-color: #fbf6f3;
+  color: #241f21 !important;
   font-weight: 850;
 }
 
 .category-summary-table tbody tr.category-total:hover th,
-.category-summary-table tbody tr.category-brand:hover th,
-.category-summary-table tbody tr.category-otherTotal:hover th {
-  background: #432021;
+.category-summary-table tbody tr.category-total:hover td {
+  background: #3b3032;
   color: #ffffff;
 }
 
-.category-summary-table tbody tr.category-total:hover td,
+.category-summary-table tbody tr.category-brand:hover th,
+.category-summary-table tbody tr.category-otherTotal:hover th {
+  background: #f0e5e2;
+  color: #241f21;
+}
+
 .category-summary-table tbody tr.category-brand:hover td,
 .category-summary-table tbody tr.category-otherTotal:hover td {
-  background: #432021;
-  color: #ffffff !important;
+  background: #fbf6f3;
+  color: #241f21 !important;
 }
 
 .category-summary-table tbody tr.category-segment th {
@@ -1340,7 +1375,7 @@ input:disabled {
 
 .workbook-card {
   background: #ffffff;
-  border: 1px solid #7b3a1a;
+  border: 1px solid #cfc6ba;
   border-radius: 8px;
   overflow: hidden;
 }
@@ -1348,7 +1383,7 @@ input:disabled {
 .workbook-card header {
   align-items: center;
   background: #ffffff;
-  border-bottom: 1px solid #7b3a1a;
+  border-bottom: 1px solid #cfc6ba;
   display: flex;
   gap: 12px;
   justify-content: space-between;
@@ -1364,8 +1399,8 @@ input:disabled {
 }
 
 .workbook-card header span {
-  background: #e4c3c4;
-  color: #432021;
+  background: #f2e9e6;
+  color: #4a3434;
   font-size: 0.78rem;
   font-weight: 820;
   padding: 6px 10px;
@@ -1426,8 +1461,8 @@ input:disabled {
 .workbook-table th,
 .workbook-table td {
   border: 0;
-  border-bottom: 1px solid #a74d22;
-  border-right: 1px solid #a74d22;
+  border-bottom: 1px solid #d6cdc3;
+  border-right: 1px solid #d6cdc3;
   font-size: 0.72rem;
   line-height: 1.05;
   min-width: 0;
@@ -1442,7 +1477,7 @@ input:disabled {
 }
 
 .workbook-table thead th {
-  box-shadow: inset 0 1px 0 #a74d22;
+  box-shadow: inset 0 1px 0 #d6cdc3;
   color: #ffffff;
   font-weight: 900;
   position: sticky;
@@ -1475,15 +1510,15 @@ input:disabled {
 
 .workbook-table thead .sticky-one,
 .workbook-table thead .sticky-two {
-  background: #432021;
-  box-shadow: inset 0 1px 0 #a74d22, 3px 0 0 #a74d22;
+  background: #3b3032;
+  box-shadow: inset 0 1px 0 #d6cdc3, 3px 0 0 #72605d;
   z-index: 8;
 }
 
 .workbook-table tbody .sticky-one,
 .workbook-table tbody .sticky-two {
   background: #ffffff;
-  box-shadow: 3px 0 0 #a74d22;
+  box-shadow: 3px 0 0 #72605d;
   color: #241f21;
   z-index: 3;
 }
@@ -1525,16 +1560,6 @@ input:disabled {
   background-color: #ffffff;
 }
 
-.workbook-group-row th.topline,
-.workbook-group-row th.volume,
-.workbook-group-row th.price,
-.workbook-group-row th.promotion,
-.workbook-group-row th.distribution,
-.workbook-group-row th.velocity {
-  background: #432021;
-  color: #ffffff;
-}
-
 .workbook-column-row th.topline,
 .workbook-column-row th.volume,
 .workbook-column-row th.price,
@@ -1562,41 +1587,59 @@ input:disabled {
 }
 
 .workbook-row.category-total th,
-.workbook-row.category-brand th,
-.workbook-row.category-otherTotal th,
 .workbook-row.customer-total th,
 .workbook-row.executive-total th {
-  background: #432021;
+  background: #3b3032;
   color: #ffffff;
   font-weight: 900;
 }
 
 .workbook-row.category-total td,
-.workbook-row.category-brand td,
-.workbook-row.category-otherTotal td,
 .workbook-row.customer-total td,
 .workbook-row.executive-total td {
-  background-color: #432021;
+  background-color: #3b3032;
   color: #ffffff !important;
   font-weight: 850;
 }
 
+.workbook-row.category-brand th,
+.workbook-row.category-otherTotal th {
+  background: #f0e5e2;
+  color: #241f21;
+  font-weight: 900;
+}
+
+.workbook-row.category-brand td,
+.workbook-row.category-otherTotal td {
+  background: #fbf6f3;
+  color: #241f21 !important;
+  font-weight: 850;
+}
+
 .workbook-row.category-total:hover th,
-.workbook-row.category-brand:hover th,
-.workbook-row.category-otherTotal:hover th,
 .workbook-row.customer-total:hover th,
 .workbook-row.executive-total:hover th {
-  background: #432021 !important;
+  background: #3b3032 !important;
   color: #ffffff;
 }
 
 .workbook-row.category-total:hover td,
-.workbook-row.category-brand:hover td,
-.workbook-row.category-otherTotal:hover td,
 .workbook-row.customer-total:hover td,
 .workbook-row.executive-total:hover td {
-  background: #432021 !important;
+  background: #3b3032 !important;
   color: #ffffff !important;
+}
+
+.workbook-row.category-brand:hover th,
+.workbook-row.category-otherTotal:hover th {
+  background: #f0e5e2 !important;
+  color: #241f21;
+}
+
+.workbook-row.category-brand:hover td,
+.workbook-row.category-otherTotal:hover td {
+  background: #fbf6f3 !important;
+  color: #241f21 !important;
 }
 
 .workbook-row.executive-segment th,
@@ -1663,33 +1706,29 @@ input:disabled {
   color: #5b5350 !important;
 }
 
-.category-summary-table tbody tr:not(.category-total):not(.category-brand):not(.category-otherTotal) td.metric-trend.up,
-.workbook-table tbody tr:not(.category-total):not(.category-brand):not(.category-otherTotal):not(.customer-total):not(.executive-total) td.metric-trend.up {
+.category-summary-table tbody tr:not(.category-total) td.metric-trend.up,
+.workbook-table tbody tr:not(.category-total):not(.customer-total):not(.executive-total) td.metric-trend.up {
   background: #eef8f2;
   color: #0d7a45 !important;
 }
 
-.category-summary-table tbody tr:not(.category-total):not(.category-brand):not(.category-otherTotal) td.metric-trend.down,
-.workbook-table tbody tr:not(.category-total):not(.category-brand):not(.category-otherTotal):not(.customer-total):not(.executive-total) td.metric-trend.down {
+.category-summary-table tbody tr:not(.category-total) td.metric-trend.down,
+.workbook-table tbody tr:not(.category-total):not(.customer-total):not(.executive-total) td.metric-trend.down {
   background: #fff1f0;
   color: #b21b25 !important;
 }
 
-.category-summary-table tbody tr:not(.category-total):not(.category-brand):not(.category-otherTotal) td.metric-trend.flat,
-.workbook-table tbody tr:not(.category-total):not(.category-brand):not(.category-otherTotal):not(.customer-total):not(.executive-total) td.metric-trend.flat {
+.category-summary-table tbody tr:not(.category-total) td.metric-trend.flat,
+.workbook-table tbody tr:not(.category-total):not(.customer-total):not(.executive-total) td.metric-trend.flat {
   background: #fff8e4;
   color: #6d5415 !important;
 }
 
 .category-summary-table tbody tr.category-total td.metric-trend,
-.category-summary-table tbody tr.category-brand td.metric-trend,
-.category-summary-table tbody tr.category-otherTotal td.metric-trend,
 .workbook-row.category-total td.metric-trend,
-.workbook-row.category-brand td.metric-trend,
-.workbook-row.category-otherTotal td.metric-trend,
 .workbook-row.customer-total td.metric-trend,
 .workbook-row.executive-total td.metric-trend {
-  background: #432021 !important;
+  background: #3b3032 !important;
   color: #ffffff !important;
 }
 
