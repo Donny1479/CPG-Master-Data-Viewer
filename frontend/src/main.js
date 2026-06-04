@@ -7,45 +7,49 @@ const APPWRITE_PROJECT_ID = import.meta.env.VITE_APPWRITE_PROJECT_ID || "6a1ddc2
 const appwriteClient = new Client().setEndpoint(APPWRITE_ENDPOINT).setProject(APPWRITE_PROJECT_ID);
 const account = new Account(appwriteClient);
 
+const DEFAULT_MARKET = "NATIONAL EX NFLD GDM";
+const DEFAULT_BENCHMARK_TARGET_MARKET = "NATIONAL CONVENTIONAL GDM";
+const DEFAULT_ROLLING_52_PERIOD = "Rolling 52 w/e";
+
 const VIEW_CONFIGS = [
   {
     id: "executiveSummary",
     label: "Executive Summary",
     source: "Tim Hortons Focus",
-    defaultPeriod: "Rolling 26 w/e 26/07/25",
-    defaultMarket: "LCL NATIONAL SUPERMARKETS DIV",
+    defaultPeriod: DEFAULT_ROLLING_52_PERIOD,
+    defaultMarket: DEFAULT_MARKET,
     controls: ["market", "period"],
   },
   {
     id: "overview",
     label: "Benchmark Analysis",
     source: "Benchmark Analysis",
-    defaultPeriod: "Rolling 26 w/e 26/07/25",
-    defaultMarket: "LCL NATIONAL SUPERMARKETS DIV",
-    defaultBenchmarkMarket: "LCL NATIONAL",
+    defaultPeriod: DEFAULT_ROLLING_52_PERIOD,
+    defaultMarket: DEFAULT_BENCHMARK_TARGET_MARKET,
+    defaultBenchmarkMarket: DEFAULT_MARKET,
     controls: ["market", "benchmarkMarket", "period"],
   },
   {
     id: "categorySummary",
     label: "Category Summary",
     source: "Summary Coffee Category",
-    defaultPeriod: "Rolling 52 w/e 26/07/25",
-    defaultMarket: "NATIONAL EX NFLD GDM",
+    defaultPeriod: DEFAULT_ROLLING_52_PERIOD,
+    defaultMarket: DEFAULT_MARKET,
     controls: ["market", "period"],
   },
   {
     id: "categoryDetail",
     label: "Category Detail",
     source: "Coffee Category",
-    defaultPeriod: "Jul 25 - 4 w/e 26/07/25",
-    defaultMarket: "NATIONAL EX NFLD GDM",
-    controls: ["market", "period", "categorySource"],
+    defaultPeriod: DEFAULT_ROLLING_52_PERIOD,
+    defaultMarket: DEFAULT_MARKET,
+    controls: ["market", "period"],
   },
   {
     id: "customerSummary",
     label: "Customer Summary",
     source: "Summary Coffee Customer",
-    defaultPeriod: "Jul 25 - 4 w/e 26/07/25",
+    defaultPeriod: DEFAULT_ROLLING_52_PERIOD,
     defaultProduct: "Tim Hortons",
     controls: ["product", "period"],
   },
@@ -53,7 +57,7 @@ const VIEW_CONFIGS = [
     id: "customerDetail",
     label: "Customer Detail",
     source: "Coffee Customer",
-    defaultPeriod: "Jul 25 - 4 w/e 26/07/25",
+    defaultPeriod: DEFAULT_ROLLING_52_PERIOD,
     defaultProduct: "Tim Hortons Instant Regular",
     controls: ["product", "period"],
   },
@@ -71,21 +75,6 @@ const METRIC_SUBGROUP_START_KEYS = new Set([
   "featureDisplayPriceDecreaseUnits",
   "itemsPerStore",
 ]);
-
-const SOURCE_OPTIONS = [
-  { value: "all", label: "All Pulls" },
-  { value: "topline_brands", label: "Topline Brands" },
-  { value: "rg", label: "R&G" },
-  { value: "single_serve", label: "Single Serve" },
-  { value: "instant", label: "Instant" },
-];
-
-const SOURCE_LABELS = {
-  topline_brands: "Topline Brands",
-  rg: "R&G",
-  single_serve: "Single Serve",
-  instant: "Instant",
-};
 
 const CATEGORY_SUMMARY_ROWS = [
   { group: "Total Coffee", label: "Packaged Coffee & Instant Coffee", product: "Packaged Coffee & Instant Coffee", sourcePullType: "topline_brands" },
@@ -411,26 +400,9 @@ const state = {
     error: null,
   },
   executiveExpanded: new Set(),
-  categoryExpanded: new Set([
-    "category:all",
-    "category:all:packaged",
-    "category:brand:Tim Hortons",
-    "category:brand:Private Label",
-    "category:brand:Starbucks",
-    "category:brand:McCafe",
-  ]),
+  categoryExpanded: new Set(),
   customerSummaryExpanded: new Set(),
-  customerDetailExpanded: new Set([
-    "customer:NATIONAL DISCOUNT GDM",
-    "customer:LCL NATIONAL",
-    "customer:TOTAL RCSS",
-    "customer:LCL NATIONAL HARD DISCOUNT DIVISION",
-    "customer:SOBEYS INC NATIONAL INCL NFLD EX LAWTONS",
-    "customer:FRESHCO",
-    "customer:METRO INC GROCERY BANNERS",
-    "customer:METRO/FOOD BASICS ONTARIO",
-    "customer:METRO/SUPER C QUEBEC",
-  ]),
+  customerDetailExpanded: new Set(),
   viewFilters: {},
 };
 
@@ -442,11 +414,10 @@ function viewConfig(id = state.activeView) {
 
 function defaultFilters(config) {
   return {
-    market: config.defaultMarket || "LCL NATIONAL SUPERMARKETS DIV",
-    benchmarkMarket: config.defaultBenchmarkMarket || "LCL NATIONAL",
+    market: config.defaultMarket || DEFAULT_MARKET,
+    benchmarkMarket: config.defaultBenchmarkMarket || DEFAULT_MARKET,
     period: config.defaultPeriod || "",
     product: config.defaultProduct || "Tim Hortons",
-    categorySource: "all",
     competitorMode: "aggregate",
   };
 }
@@ -538,6 +509,20 @@ function indexValue(value) {
 function deltaClass(value) {
   if (value == null || Math.abs(value) < 0.05) return "neutral";
   return value > 0 ? "positive" : "negative";
+}
+
+function trendDirection(value) {
+  if (value == null || Math.abs(value) < 0.05) return "flat";
+  return value > 0 ? "up" : "down";
+}
+
+function resetSessionViewState() {
+  state.activeView = "executiveSummary";
+  state.executiveExpanded = new Set();
+  state.categoryExpanded = new Set();
+  state.customerSummaryExpanded = new Set();
+  state.customerDetailExpanded = new Set();
+  state.viewFilters = {};
 }
 
 function icon(name) {
@@ -708,7 +693,6 @@ function renderToolbar(config, filters) {
       ${config.controls.includes("benchmarkMarket") ? selectControl("benchmarkMarket", "Benchmark", filters.markets, filters.benchmarkMarket) : ""}
       ${config.controls.includes("product") ? selectControl("product", "Manufacturer / Brand / Pack Group", filters.products, filters.product) : ""}
       ${config.controls.includes("period") ? selectControl("period", "Time Frame", filters.periods, filters.period) : ""}
-      ${config.controls.includes("categorySource") ? optionControl("categorySource", "Raw Pull", SOURCE_OPTIONS, activeFilters().categorySource) : ""}
     </section>
   `;
 }
@@ -719,17 +703,6 @@ function selectControl(id, label, options, value) {
       <span>${escapeHtml(label)}</span>
       <select id="${id}">
         ${options.map((option) => `<option value="${escapeHtml(option)}" ${option === value ? "selected" : ""}>${escapeHtml(option)}</option>`).join("")}
-      </select>
-    </label>
-  `;
-}
-
-function optionControl(id, label, options, value) {
-  return `
-    <label class="control compact">
-      <span>${escapeHtml(label)}</span>
-      <select id="${id}">
-        ${options.map((option) => `<option value="${escapeHtml(option.value)}" ${option.value === value ? "selected" : ""}>${escapeHtml(option.label)}</option>`).join("")}
       </select>
     </label>
   `;
@@ -977,12 +950,12 @@ function plainCell(value, className = "") {
 }
 
 function indexCell(value, extraClass = "") {
-  const indexClass = value == null ? "neutral" : value < 85 ? "index-low" : value > 115 ? "index-high" : "index-neutral";
+  const indexClass = value == null ? "neutral" : value < 100 ? "index-low" : value > 100 ? "index-high" : "index-neutral";
   return `<td class="index-cell ${indexClass} ${escapeHtml(extraClass)}">${escapeHtml(indexValue(value))}</td>`;
 }
 
 function trendCell(value, formatter, className = "") {
-  const direction = value == null || Math.abs(value) < 0.05 ? "flat" : value > 0 ? "up" : "down";
+  const direction = trendDirection(value);
   return `
     <td class="trend-cell ${direction} ${escapeHtml(className)}">
       <span class="trend-marker ${direction}" aria-hidden="true"></span>
@@ -1238,7 +1211,18 @@ function categoryMetricCell(row, column) {
   const value = row?.[column.key];
   const change = isChangeMetric(column.key);
   const className = change ? deltaClass(value) : "neutral";
-  return `<td class="${metricColumnClass(column)} ${change ? "change-metric" : ""} ${className}">${escapeHtml(column.format(value))}</td>`;
+  if (!change) {
+    return `<td class="${metricColumnClass(column)} neutral">${escapeHtml(column.format(value))}</td>`;
+  }
+  const direction = trendDirection(value);
+  return `
+    <td class="${metricColumnClass(column)} change-metric metric-trend ${direction} ${className}">
+      <span class="metric-trend-value">
+        <span class="trend-marker ${direction}" aria-hidden="true"></span>
+        <span>${escapeHtml(column.format(value))}</span>
+      </span>
+    </td>
+  `;
 }
 
 function isChangeMetric(key) {
@@ -1263,15 +1247,13 @@ function filterCategoryTreeBySource(nodes, source) {
 }
 
 function renderCategoryDetail() {
-  const source = activeFilters().categorySource;
-  const tree = filterCategoryTreeBySource(categorySummaryTree(), source);
+  const tree = categorySummaryTree();
   const rows = flattenCategoryTree(tree);
-  const sourceLabel = SOURCE_OPTIONS.find((option) => option.value === source)?.label || "All Pulls";
   return `
     <section class="view-strip">
       ${metricPill("Market", state.data.filters.market)}
       ${metricPill("Time Frame", state.data.filters.period)}
-      ${metricPill("Raw Pull", sourceLabel)}
+      ${metricPill("Visible Rows", rows.length.toLocaleString())}
     </section>
     <section class="workbook-card">
       <header>
@@ -1487,7 +1469,18 @@ function workbookMetricCell(row, column) {
   const value = row?.[column.key];
   const change = isChangeMetric(column.key);
   const className = change ? deltaClass(value) : "neutral";
-  return `<td class="${metricColumnClass(column)} ${change ? "change-metric" : ""} ${className}">${escapeHtml(column.format(value))}</td>`;
+  if (!change) {
+    return `<td class="${metricColumnClass(column)} neutral">${escapeHtml(column.format(value))}</td>`;
+  }
+  const direction = trendDirection(value);
+  return `
+    <td class="${metricColumnClass(column)} change-metric metric-trend ${direction} ${className}">
+      <span class="metric-trend-value">
+        <span class="trend-marker ${direction}" aria-hidden="true"></span>
+        <span>${escapeHtml(column.format(value))}</span>
+      </span>
+    </td>
+  `;
 }
 
 function metricPill(label, value) {
@@ -1619,6 +1612,7 @@ async function initializeAuth() {
     state.auth.user = null;
     state.auth.checking = false;
     state.loading = false;
+    resetSessionViewState();
     render();
   }
 }
@@ -1634,6 +1628,7 @@ async function signOut() {
   state.data = null;
   state.error = null;
   state.loading = false;
+  resetSessionViewState();
   render();
 }
 
@@ -1646,6 +1641,7 @@ async function dashboardAuthHeaders() {
   } catch (error) {
     state.auth.user = null;
     state.auth.error = "Your session expired. Sign in again.";
+    resetSessionViewState();
     throw error;
   }
 }
@@ -1683,7 +1679,6 @@ function bindInteractions() {
   bindFilter("benchmarkMarket");
   bindFilter("period");
   bindFilter("product");
-  bindFilter("categorySource", false);
 
   const competitorMode = document.querySelector("#competitorMode");
   competitorMode?.addEventListener("change", (event) => {
@@ -1801,6 +1796,7 @@ async function loadDashboard() {
       if (response.status === 401) {
         state.auth.user = null;
         state.auth.error = payload.detail || "Please sign in again.";
+        resetSessionViewState();
       }
       throw new Error(payload.detail || payload.error || response.statusText);
     }

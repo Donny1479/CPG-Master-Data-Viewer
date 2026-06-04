@@ -4,8 +4,9 @@ const DEFAULT_IMPORT_RUNS_TABLE_ID = "import_runs";
 const DEFAULT_IMPORT_METADATA_TABLE_ID = "import_metadata";
 const PAGE_SIZE = 5000;
 const MAX_ROWS = 50000;
-const DEFAULT_TARGET_MARKET = "LCL NATIONAL SUPERMARKETS DIV";
-const DEFAULT_BENCHMARK_MARKET = "LCL NATIONAL";
+const DEFAULT_TARGET_MARKET = "NATIONAL EX NFLD GDM";
+const DEFAULT_BENCHMARK_MARKET = "NATIONAL EX NFLD GDM";
+const DEFAULT_ALTERNATE_BENCHMARK_MARKET = "NATIONAL CONVENTIONAL GDM";
 const DEFAULT_CUSTOMER_PRODUCT = "Tim Hortons";
 
 const OVERVIEW_SECTIONS = [
@@ -273,9 +274,9 @@ function uniqueSorted(rows, key) {
 
 function periodSortScore(period) {
   if (!period) return 99;
-  if (period.includes("Rolling 26")) return 0;
-  if (period.includes("Rolling 13")) return 1;
-  if (period.includes("Rolling 52")) return 2;
+  if (period.includes("Rolling 52")) return 0;
+  if (period.includes("Rolling 26")) return 1;
+  if (period.includes("Rolling 13")) return 2;
   if (period.includes("YTD")) return 3;
   return 4;
 }
@@ -290,8 +291,8 @@ function pickDefaultPeriod(periods) {
 function pickDefaultMarket(markets) {
   return (
     markets.find((market) => market === DEFAULT_TARGET_MARKET) ||
-    markets.find((market) => market === DEFAULT_BENCHMARK_MARKET) ||
-    markets.find((market) => market === "NATIONAL EX NFLD GDM") ||
+    markets.find((market) => market === DEFAULT_ALTERNATE_BENCHMARK_MARKET) ||
+    markets.find((market) => market === "LCL NATIONAL") ||
     markets[0] ||
     ""
   );
@@ -300,7 +301,8 @@ function pickDefaultMarket(markets) {
 function pickDefaultBenchmarkMarket(markets, targetMarket) {
   return (
     markets.find((market) => market === DEFAULT_BENCHMARK_MARKET && market !== targetMarket) ||
-    markets.find((market) => market === "NATIONAL EX NFLD GDM" && market !== targetMarket) ||
+    markets.find((market) => market === DEFAULT_ALTERNATE_BENCHMARK_MARKET && market !== targetMarket) ||
+    markets.find((market) => market === "LCL NATIONAL" && market !== targetMarket) ||
     markets.find((market) => market !== targetMarket) ||
     targetMarket ||
     ""
