@@ -9,9 +9,17 @@ const account = new Account(appwriteClient);
 
 const VIEW_CONFIGS = [
   {
+    id: "executiveSummary",
+    label: "Executive Summary",
+    source: "Tim Hortons Focus",
+    defaultPeriod: "Rolling 26 w/e 26/07/25",
+    defaultMarket: "LCL NATIONAL SUPERMARKETS DIV",
+    controls: ["market", "period"],
+  },
+  {
     id: "overview",
-    label: "Executive Overview",
-    source: "Dashboard",
+    label: "Benchmark Analysis",
+    source: "Benchmark Analysis",
     defaultPeriod: "Rolling 26 w/e 26/07/25",
     defaultMarket: "LCL NATIONAL SUPERMARKETS DIV",
     defaultBenchmarkMarket: "LCL NATIONAL",
@@ -50,6 +58,19 @@ const VIEW_CONFIGS = [
     controls: ["product", "period"],
   },
 ];
+
+const METRIC_SUBGROUP_START_KEYS = new Set([
+  "dollarSales000",
+  "units000",
+  "avgUnitsPrice",
+  "noPromoUnitsPrice",
+  "anyPromoUnitsPrice",
+  "displayOnlyUnits",
+  "featureOnlyUnits",
+  "priceDecreaseOnlyUnits",
+  "featureDisplayPriceDecreaseUnits",
+  "itemsPerStore",
+]);
 
 const SOURCE_OPTIONS = [
   { value: "all", label: "All Pulls" },
@@ -173,9 +194,7 @@ const CATEGORY_METRIC_GROUPS = [
   },
 ];
 
-const CATEGORY_METRIC_COLUMNS = CATEGORY_METRIC_GROUPS.flatMap((group) =>
-  group.columns.map((column) => ({ ...column, tone: group.tone })),
-);
+const CATEGORY_METRIC_COLUMNS = metricColumnsWithGrouping(CATEGORY_METRIC_GROUPS);
 
 const DETAIL_METRIC_GROUPS = [
   {
@@ -252,9 +271,49 @@ const DETAIL_METRIC_GROUPS = [
   },
 ];
 
-const DETAIL_METRIC_COLUMNS = DETAIL_METRIC_GROUPS.flatMap((group) =>
-  group.columns.map((column) => ({ ...column, tone: group.tone })),
-);
+const DETAIL_METRIC_COLUMNS = metricColumnsWithGrouping(DETAIL_METRIC_GROUPS);
+
+const EXECUTIVE_METRIC_GROUPS = [
+  {
+    title: "Sales",
+    tone: "topline",
+    columns: [
+      { key: "dollarSales000", label: "$ ('000)", format: wholeNumber },
+      { key: "dollarPctChangeYa", label: "$ % Chg YA", format: percent },
+    ],
+  },
+  {
+    title: "Units",
+    tone: "volume",
+    columns: [
+      { key: "units000", label: "Units ('000)", format: wholeNumber },
+      { key: "unitsPctChangeYa", label: "Units % Chg YA", format: percent },
+    ],
+  },
+  {
+    title: "Price",
+    tone: "price",
+    columns: [{ key: "avgUnitsPricePctChangeYa", label: "Avg Units Price % Chg YA", format: percent }],
+  },
+  {
+    title: "Promotion",
+    tone: "promotion",
+    columns: [
+      { key: "soldOnPromoPct", label: "% Sold on Promo", format: percent },
+      { key: "soldOnPromoChangeYaPct", label: "% Sold on Promo Chg YA", format: percent },
+    ],
+  },
+  {
+    title: "Distribution",
+    tone: "distribution",
+    columns: [
+      { key: "acvPct", label: "% ACV", format: percent },
+      { key: "acvPctChangeYa", label: "% ACV % Chg YA", format: percent },
+    ],
+  },
+];
+
+const EXECUTIVE_METRIC_COLUMNS = metricColumnsWithGrouping(EXECUTIVE_METRIC_GROUPS);
 
 const CUSTOMER_TREE = [
   { market: "All Markets/Customers/Banners", kind: "total" },
@@ -341,7 +400,7 @@ const CUSTOMER_TREE = [
 ];
 
 const state = {
-  activeView: "overview",
+  activeView: "executiveSummary",
   data: null,
   loading: true,
   error: null,
@@ -351,6 +410,7 @@ const state = {
     user: null,
     error: null,
   },
+  executiveExpanded: new Set(),
   categoryExpanded: new Set([
     "category:all",
     "category:all:packaged",
@@ -389,6 +449,33 @@ function defaultFilters(config) {
     categorySource: "all",
     competitorMode: "aggregate",
   };
+}
+
+function metricColumnsWithGrouping(groups) {
+  return groups.flatMap((group, groupIndex) =>
+    group.columns.map((column, columnIndex) => ({
+      ...column,
+      tone: group.tone,
+      groupIndex,
+      columnIndex,
+      subgroupStart: columnIndex > 0 && METRIC_SUBGROUP_START_KEYS.has(column.key),
+    })),
+  );
+}
+
+function metricColumnClass(column) {
+  return [
+    column.tone,
+    column.columnIndex === 0 ? "metric-group-start" : "",
+    column.subgroupStart ? "metric-subgroup-start" : "",
+  ]
+    .filter(Boolean)
+    .map(escapeHtml)
+    .join(" ");
+}
+
+function metricGroupHeaderClass(group, index) {
+  return [group.tone, index > 0 ? "metric-group-start" : ""].filter(Boolean).map(escapeHtml).join(" ");
 }
 
 function activeFilters() {
@@ -596,6 +683,9 @@ function renderActiveView() {
   const filters = state.data.filters;
   const controls = renderToolbar(config, filters);
 
+  if (config.id === "executiveSummary") {
+    return `${controls}${renderExecutiveSummary()}`;
+  }
   if (config.id === "overview") {
     return `${controls}${renderOverview()}`;
   }
@@ -642,6 +732,93 @@ function optionControl(id, label, options, value) {
         ${options.map((option) => `<option value="${escapeHtml(option.value)}" ${option.value === value ? "selected" : ""}>${escapeHtml(option.label)}</option>`).join("")}
       </select>
     </label>
+  `;
+}
+
+function renderExecutiveSummary() {
+  const tree = executiveSummaryTree();
+  const rows = flattenExecutiveTree(tree);
+  return `
+    <section class="view-strip">
+      ${metricPill("Market", state.data.filters.market)}
+      ${metricPill("Time Frame", state.data.filters.period)}
+      ${metricPill("Visible Rows", rows.length.toLocaleString())}
+    </section>
+    <section class="workbook-card executive-summary-card">
+      <header>
+        <h2>Tim Hortons Executive Summary</h2>
+        <span>${escapeHtml(state.data.filters.market)} | ${escapeHtml(state.data.filters.period)}</span>
+      </header>
+      ${executiveSummaryTable(rows)}
+    </section>
+  `;
+}
+
+function executiveSummaryTree() {
+  const rows = state.data.views.category.rows;
+  const lookup = categoryLookup(rows);
+  return [
+    categoryNode({
+      key: "executive:total",
+      label: "Total Coffee",
+      row: findCategoryRow(lookup, "topline_brands", "Tim Hortons"),
+      kind: "total",
+    }),
+    rgSegmentNode(lookup, "Tim Hortons", "executive"),
+    singleServeSegmentNode(lookup, "Tim Hortons", "executive"),
+    instantSegmentNode(lookup, "Tim Hortons", "executive"),
+  ].filter(Boolean);
+}
+
+function flattenExecutiveTree(nodes, depth = 0) {
+  return nodes.flatMap((node) => {
+    const row = { ...node, depth, isExpanded: state.executiveExpanded.has(node.key) };
+    if (!row.isExpanded || !node.children.length) return [row];
+    return [row, ...flattenExecutiveTree(node.children, depth + 1)];
+  });
+}
+
+function executiveSummaryTable(rows) {
+  if (!rows.length) return emptyPanel("No Tim Hortons rows for this market and time frame.");
+  return `
+    <div class="workbook-table-wrap executive-table-wrap">
+      <table class="workbook-table executive-summary-table">
+        <colgroup>
+          <col class="executive-label-col">
+          ${EXECUTIVE_METRIC_COLUMNS.map((column) => `<col class="workbook-metric-col ${metricColumnClass(column)}">`).join("")}
+        </colgroup>
+        <thead>
+          <tr class="workbook-group-row">
+            <th class="sticky-one" rowspan="2">Tim Hortons / Segment / Format</th>
+            ${EXECUTIVE_METRIC_GROUPS.map((group, index) => `<th class="${metricGroupHeaderClass(group, index)}" colspan="${group.columns.length}">${escapeHtml(group.title)}</th>`).join("")}
+          </tr>
+          <tr class="workbook-column-row">
+            ${EXECUTIVE_METRIC_COLUMNS.map((column) => `<th class="${metricColumnClass(column)}">${escapeHtml(column.label)}</th>`).join("")}
+          </tr>
+        </thead>
+        <tbody>
+          ${rows.map(executiveSummaryRow).join("")}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+function executiveSummaryRow(node) {
+  const expandable = node.children.length > 0;
+  return `
+    <tr class="workbook-row executive-${node.kind} depth-${node.depth}">
+      <th class="sticky-one hierarchy-label">
+        <span class="tree-indent" style="--depth:${node.depth}"></span>
+        ${
+          expandable
+            ? `<button class="tree-toggle" type="button" aria-expanded="${node.isExpanded ? "true" : "false"}" data-executive-toggle="${escapeHtml(node.key)}">${node.isExpanded ? "-" : "+"}</button>`
+            : `<span class="tree-spacer"></span>`
+        }
+        <span>${escapeHtml(node.label)}</span>
+      </th>
+      ${EXECUTIVE_METRIC_COLUMNS.map((column) => workbookMetricCell(node.row, column)).join("")}
+    </tr>
   `;
 }
 
@@ -700,34 +877,34 @@ function dashboardScorecard(sections, overview) {
           <tr class="scorecard-group-row">
             <th class="sticky-col"></th>
             <th colspan="3">Development</th>
-            <th colspan="5">Performance</th>
-            <th colspan="6">Casuals</th>
+            <th class="scorecard-group-start" colspan="5">Performance</th>
+            <th class="scorecard-group-start" colspan="6">Casuals</th>
           </tr>
           <tr class="scorecard-subhead-row">
             <th class="sticky-col" rowspan="2">Key Manufacturers / Brands / Pack Groups</th>
             <th colspan="2">$ Shr - Product</th>
             <th>Index</th>
-            <th>$ (000)</th>
+            <th class="scorecard-group-start">$ (000)</th>
             <th>$ % Chg YA</th>
-            <th>$ (000)</th>
+            <th class="scorecard-benchmark-start">$ (000)</th>
             <th>$ % Chg YA</th>
             <th>Delta</th>
-            <th>Avg Units Price Chg YA</th>
+            <th class="scorecard-group-start">Avg Units Price Chg YA</th>
             <th>% Sold on Promo Chg YA</th>
             <th>% ACV % Chg YA</th>
-            <th>Avg Units Price Chg YA</th>
+            <th class="scorecard-benchmark-start">Avg Units Price Chg YA</th>
             <th>% Sold on Promo Chg YA</th>
             <th>% ACV % Chg YA</th>
           </tr>
           <tr class="scorecard-market-row">
             <th>${escapeHtml(overview.targetMarket)}</th>
-            <th>${escapeHtml(overview.benchmarkMarket)}</th>
+            <th class="scorecard-benchmark-start">${escapeHtml(overview.benchmarkMarket)}</th>
             <th>Index</th>
-            <th colspan="2">${escapeHtml(overview.targetMarket)}</th>
-            <th colspan="2">${escapeHtml(overview.benchmarkMarket)}</th>
+            <th class="scorecard-group-start" colspan="2">${escapeHtml(overview.targetMarket)}</th>
+            <th class="scorecard-benchmark-start" colspan="2">${escapeHtml(overview.benchmarkMarket)}</th>
             <th>% Chg</th>
-            <th colspan="3">${escapeHtml(overview.targetMarket)}</th>
-            <th colspan="3">${escapeHtml(overview.benchmarkMarket)}</th>
+            <th class="scorecard-group-start" colspan="3">${escapeHtml(overview.targetMarket)}</th>
+            <th class="scorecard-benchmark-start" colspan="3">${escapeHtml(overview.benchmarkMarket)}</th>
           </tr>
         </thead>
         <tbody>
@@ -762,17 +939,17 @@ function dashboardMetricCells(row) {
   const m = row.metrics;
   return `
     ${plainCell(percent(m.targetShare))}
-    ${plainCell(percent(m.benchmarkShare))}
+    ${plainCell(percent(m.benchmarkShare), "scorecard-benchmark-start")}
     ${indexCell(m.shareIndex)}
-    ${plainCell(wholeNumber(m.targetSales000))}
+    ${plainCell(wholeNumber(m.targetSales000), "scorecard-group-start")}
     ${trendCell(m.targetSalesPctChangeYa, percent)}
-    ${plainCell(wholeNumber(m.benchmarkSales000))}
+    ${plainCell(wholeNumber(m.benchmarkSales000), "scorecard-benchmark-start")}
     ${trendCell(m.benchmarkSalesPctChangeYa, percent)}
     ${trendCell(m.salesPctChangeDelta, percent)}
-    ${trendCell(m.targetAvgUnitsPriceChangeYa, currency)}
+    ${trendCell(m.targetAvgUnitsPriceChangeYa, currency, "scorecard-group-start")}
     ${trendCell(m.targetSoldOnPromoChangeYaPct, percent)}
     ${trendCell(m.targetAcvPctChangeYa, percent)}
-    ${trendCell(m.benchmarkAvgUnitsPriceChangeYa, currency)}
+    ${trendCell(m.benchmarkAvgUnitsPriceChangeYa, currency, "scorecard-benchmark-start")}
     ${trendCell(m.benchmarkSoldOnPromoChangeYaPct, percent)}
     ${trendCell(m.benchmarkAcvPctChangeYa, percent)}
   `;
@@ -795,19 +972,19 @@ function changeNumber(value, digits = 1) {
   return value < 0 ? `(${formatted})` : formatted;
 }
 
-function plainCell(value) {
-  return `<td>${escapeHtml(value)}</td>`;
+function plainCell(value, className = "") {
+  return `<td${className ? ` class="${escapeHtml(className)}"` : ""}>${escapeHtml(value)}</td>`;
 }
 
-function indexCell(value) {
-  const className = value == null ? "neutral" : value < 85 ? "index-low" : value > 115 ? "index-high" : "index-neutral";
-  return `<td class="index-cell ${className}">${escapeHtml(indexValue(value))}</td>`;
+function indexCell(value, extraClass = "") {
+  const indexClass = value == null ? "neutral" : value < 85 ? "index-low" : value > 115 ? "index-high" : "index-neutral";
+  return `<td class="index-cell ${indexClass} ${escapeHtml(extraClass)}">${escapeHtml(indexValue(value))}</td>`;
 }
 
-function trendCell(value, formatter) {
+function trendCell(value, formatter, className = "") {
   const direction = value == null || Math.abs(value) < 0.05 ? "flat" : value > 0 ? "up" : "down";
   return `
-    <td class="trend-cell ${direction}">
+    <td class="trend-cell ${direction} ${escapeHtml(className)}">
       <span class="trend-marker ${direction}" aria-hidden="true"></span>
       <span>${escapeHtml(formatter(value))}</span>
     </td>
@@ -1020,15 +1197,15 @@ function categorySummaryTable(rows) {
       <table class="category-summary-table">
         <colgroup>
           <col class="category-label-col">
-          ${CATEGORY_METRIC_COLUMNS.map((column) => `<col class="category-metric-col ${escapeHtml(column.tone)}">`).join("")}
+          ${CATEGORY_METRIC_COLUMNS.map((column) => `<col class="category-metric-col ${metricColumnClass(column)}">`).join("")}
         </colgroup>
         <thead>
           <tr class="category-group-row">
             <th class="sticky-col" rowspan="2">Brand / Segment / Format</th>
-            ${CATEGORY_METRIC_GROUPS.map((group) => `<th class="${escapeHtml(group.tone)}" colspan="${group.columns.length}">${escapeHtml(group.title)}</th>`).join("")}
+            ${CATEGORY_METRIC_GROUPS.map((group, index) => `<th class="${metricGroupHeaderClass(group, index)}" colspan="${group.columns.length}">${escapeHtml(group.title)}</th>`).join("")}
           </tr>
           <tr class="category-column-row">
-            ${CATEGORY_METRIC_COLUMNS.map((column) => `<th class="${escapeHtml(column.tone)}">${escapeHtml(column.label)}</th>`).join("")}
+            ${CATEGORY_METRIC_COLUMNS.map((column) => `<th class="${metricColumnClass(column)}">${escapeHtml(column.label)}</th>`).join("")}
           </tr>
         </thead>
         <tbody>
@@ -1061,7 +1238,7 @@ function categoryMetricCell(row, column) {
   const value = row?.[column.key];
   const change = isChangeMetric(column.key);
   const className = change ? deltaClass(value) : "neutral";
-  return `<td class="${escapeHtml(column.tone)} ${change ? "change-metric" : ""} ${className}">${escapeHtml(column.format(value))}</td>`;
+  return `<td class="${metricColumnClass(column)} ${change ? "change-metric" : ""} ${className}">${escapeHtml(column.format(value))}</td>`;
 }
 
 function isChangeMetric(key) {
@@ -1113,15 +1290,15 @@ function categoryDetailTable(rows) {
       <table class="workbook-table category-detail-table">
         <colgroup>
           <col class="category-detail-label-col">
-          ${DETAIL_METRIC_COLUMNS.map((column) => `<col class="workbook-metric-col ${escapeHtml(column.tone)}">`).join("")}
+          ${DETAIL_METRIC_COLUMNS.map((column) => `<col class="workbook-metric-col ${metricColumnClass(column)}">`).join("")}
         </colgroup>
         <thead>
           <tr class="workbook-group-row">
             <th class="sticky-one" rowspan="2">Brand / Segment / Format</th>
-            ${DETAIL_METRIC_GROUPS.map((group) => `<th class="${escapeHtml(group.tone)}" colspan="${group.columns.length}">${escapeHtml(group.title)}</th>`).join("")}
+            ${DETAIL_METRIC_GROUPS.map((group, index) => `<th class="${metricGroupHeaderClass(group, index)}" colspan="${group.columns.length}">${escapeHtml(group.title)}</th>`).join("")}
           </tr>
           <tr class="workbook-column-row">
-            ${DETAIL_METRIC_COLUMNS.map((column) => `<th class="${escapeHtml(column.tone)}">${escapeHtml(column.label)}</th>`).join("")}
+            ${DETAIL_METRIC_COLUMNS.map((column) => `<th class="${metricColumnClass(column)}">${escapeHtml(column.label)}</th>`).join("")}
           </tr>
         </thead>
         <tbody>
@@ -1242,15 +1419,15 @@ function customerSummaryTable(rows) {
       <table class="workbook-table customer-summary-table">
         <colgroup>
           <col class="customer-label-col">
-          ${CATEGORY_METRIC_COLUMNS.map((column) => `<col class="workbook-metric-col ${escapeHtml(column.tone)}">`).join("")}
+          ${CATEGORY_METRIC_COLUMNS.map((column) => `<col class="workbook-metric-col ${metricColumnClass(column)}">`).join("")}
         </colgroup>
         <thead>
           <tr class="workbook-group-row">
             <th class="sticky-one" rowspan="2">All Markets / Customers / Banners</th>
-            ${CATEGORY_METRIC_GROUPS.map((group) => `<th class="${escapeHtml(group.tone)}" colspan="${group.columns.length}">${escapeHtml(group.title)}</th>`).join("")}
+            ${CATEGORY_METRIC_GROUPS.map((group, index) => `<th class="${metricGroupHeaderClass(group, index)}" colspan="${group.columns.length}">${escapeHtml(group.title)}</th>`).join("")}
           </tr>
           <tr class="workbook-column-row">
-            ${CATEGORY_METRIC_COLUMNS.map((column) => `<th class="${escapeHtml(column.tone)}">${escapeHtml(column.label)}</th>`).join("")}
+            ${CATEGORY_METRIC_COLUMNS.map((column) => `<th class="${metricColumnClass(column)}">${escapeHtml(column.label)}</th>`).join("")}
           </tr>
         </thead>
         <tbody>
@@ -1268,15 +1445,15 @@ function customerDetailTable(rows) {
       <table class="workbook-table customer-detail-table">
         <colgroup>
           <col class="customer-label-col">
-          ${DETAIL_METRIC_COLUMNS.map((column) => `<col class="workbook-metric-col ${escapeHtml(column.tone)}">`).join("")}
+          ${DETAIL_METRIC_COLUMNS.map((column) => `<col class="workbook-metric-col ${metricColumnClass(column)}">`).join("")}
         </colgroup>
         <thead>
           <tr class="workbook-group-row">
             <th class="sticky-one" rowspan="2">All Markets / Customers / Banners</th>
-            ${DETAIL_METRIC_GROUPS.map((group) => `<th class="${escapeHtml(group.tone)}" colspan="${group.columns.length}">${escapeHtml(group.title)}</th>`).join("")}
+            ${DETAIL_METRIC_GROUPS.map((group, index) => `<th class="${metricGroupHeaderClass(group, index)}" colspan="${group.columns.length}">${escapeHtml(group.title)}</th>`).join("")}
           </tr>
           <tr class="workbook-column-row">
-            ${DETAIL_METRIC_COLUMNS.map((column) => `<th class="${escapeHtml(column.tone)}">${escapeHtml(column.label)}</th>`).join("")}
+            ${DETAIL_METRIC_COLUMNS.map((column) => `<th class="${metricColumnClass(column)}">${escapeHtml(column.label)}</th>`).join("")}
           </tr>
         </thead>
         <tbody>
@@ -1310,7 +1487,7 @@ function workbookMetricCell(row, column) {
   const value = row?.[column.key];
   const change = isChangeMetric(column.key);
   const className = change ? deltaClass(value) : "neutral";
-  return `<td class="${escapeHtml(column.tone)} ${change ? "change-metric" : ""} ${className}">${escapeHtml(column.format(value))}</td>`;
+  return `<td class="${metricColumnClass(column)} ${change ? "change-metric" : ""} ${className}">${escapeHtml(column.format(value))}</td>`;
 }
 
 function metricPill(label, value) {
@@ -1512,6 +1689,13 @@ function bindInteractions() {
   competitorMode?.addEventListener("change", (event) => {
     activeFilters().competitorMode = event.target.checked ? "brands" : "aggregate";
     render();
+  });
+
+  document.querySelectorAll("[data-executive-toggle]").forEach((button) => {
+    button.addEventListener("click", () => {
+      toggleSetValue(state.executiveExpanded, button.dataset.executiveToggle);
+      renderPreservingTableScroll();
+    });
   });
 
   document.querySelectorAll("[data-category-toggle]").forEach((button) => {
