@@ -17,7 +17,6 @@ const BUSINESS_COFFEE_DASHBOARDS = "coffee_dashboard";
 
 const NAV_GROUPS = [
   { id: BUSINESS_COFFEE, label: "Coffee Insights" },
-  { id: BUSINESS_COFFEE_DASHBOARDS, label: "Coffee Dashboards" },
   { id: BUSINESS_SOUP, label: "Soup & Chili Insights" },
 ];
 
@@ -42,6 +41,19 @@ const VIEW_CONFIGS = [
     defaultPeriod: DEFAULT_ROLLING_52_PERIOD,
     defaultMarket: DEFAULT_MARKET,
     controls: ["market", "period"],
+  },
+  {
+    id: "coffeeDashboard",
+    label: "Coffee Dashboard",
+    source: "Coffee Dashboards",
+    kind: "coffeeDashboard",
+    business: BUSINESS_COFFEE_DASHBOARDS,
+    defaultMarket: DEFAULT_MARKET,
+    defaultBrandPack1: "Tim Hortons Single Serve",
+    defaultBrandPack2: "Private Label Single Serve",
+    defaultMetric: "Avg Units Price",
+    defaultMetricChange: "Avg Units Price % Chg YA",
+    controls: ["market", "brandPack1", "brandPack2"],
   },
   {
     id: "overview",
@@ -98,45 +110,6 @@ const VIEW_CONFIGS = [
     defaultPeriod: DEFAULT_ROLLING_52_PERIOD,
     defaultProduct: "Tim Hortons Instant Regular",
     controls: ["product", "period"],
-  },
-  {
-    id: "coffeeShareTrended",
-    label: "Share Trended",
-    source: "Coffee Dashboards",
-    kind: "coffeeDashboard",
-    dashboardView: "shareTrended",
-    business: BUSINESS_COFFEE_DASHBOARDS,
-    navGroup: BUSINESS_COFFEE_DASHBOARDS,
-    defaultMarket: DEFAULT_MARKET,
-    defaultBrandPack1: "Tim Hortons Single Serve",
-    defaultBrandPack2: "Private Label Single Serve",
-    controls: ["market", "brandPack1", "brandPack2"],
-  },
-  {
-    id: "coffeePriceCompare",
-    label: "Price Compare",
-    source: "Coffee Dashboards",
-    kind: "coffeeDashboard",
-    dashboardView: "priceCompare",
-    business: BUSINESS_COFFEE_DASHBOARDS,
-    navGroup: BUSINESS_COFFEE_DASHBOARDS,
-    defaultMarket: DEFAULT_MARKET,
-    defaultMetric: "Avg Units Price",
-    defaultMetricChange: "Avg Units Price % Chg YA",
-    defaultBrandPack1: "Tim Hortons Single Serve",
-    defaultBrandPack2: "Private Label Single Serve",
-    controls: ["market", "metric", "metricChange", "brandPack1", "brandPack2"],
-  },
-  {
-    id: "coffeeMarketView",
-    label: "Market View",
-    source: "Coffee Dashboards",
-    kind: "coffeeDashboard",
-    dashboardView: "marketView",
-    business: BUSINESS_COFFEE_DASHBOARDS,
-    navGroup: BUSINESS_COFFEE_DASHBOARDS,
-    defaultBrandPack: "Private Label Single Serve",
-    controls: ["period", "brandPack"],
   },
   {
     id: "soupOverview",
@@ -860,9 +833,7 @@ function navItem(config) {
   const iconName = config.kind?.includes("customer")
     ? "customer"
     : config.kind === "coffeeDashboard"
-      ? config.dashboardView === "priceCompare"
-        ? "price"
-        : "trend"
+      ? "trend"
     : config.kind?.includes("Detail") || config.kind?.includes("detail")
       ? "detail"
       : config.kind === "overview"
@@ -920,7 +891,7 @@ function renderActiveView() {
     return `${controls}${renderCustomerSummary()}`;
   }
   if (config.kind === "coffeeDashboard") {
-    return `${controls}${renderCoffeeDashboard(config.dashboardView)}`;
+    return `${controls}${renderCoffeeDashboard()}`;
   }
   return `${controls}${renderCustomerDetail()}`;
 }
@@ -931,12 +902,12 @@ function renderToolbar(config, filters) {
   }
   return `
     <section class="toolbar">
-      ${config.controls.includes("market") ? selectControl("market", "Market / Customer / Banner", filters.markets, filters.market) : ""}
+      ${config.controls.includes("market") ? selectControl("market", config.kind === "coffeeDashboard" ? "Market" : "Market / Customer / Banner", filters.markets, filters.market) : ""}
       ${config.controls.includes("benchmarkMarket") ? selectControl("benchmarkMarket", "Benchmark", filters.markets, filters.benchmarkMarket) : ""}
       ${config.controls.includes("product") ? selectControl("product", "Manufacturer / Brand / Pack Group", filters.products, filters.product) : ""}
       ${config.controls.includes("period") ? selectControl("period", "Time Frame", filters.periods, filters.period) : ""}
-      ${config.controls.includes("brandPack1") ? selectControl("brandPack1", "Brand & Pack Group 1", filters.products, filters.brandPack1) : ""}
-      ${config.controls.includes("brandPack2") ? selectControl("brandPack2", "Brand & Pack Group 2", filters.products, filters.brandPack2) : ""}
+      ${config.controls.includes("brandPack1") ? selectControl("brandPack1", config.kind === "coffeeDashboard" ? "Primary Brand/Pack Group" : "Brand & Pack Group 1", filters.products, filters.brandPack1) : ""}
+      ${config.controls.includes("brandPack2") ? selectControl("brandPack2", config.kind === "coffeeDashboard" ? "Benchmark Brand/Pack Group" : "Brand & Pack Group 2", filters.products, filters.brandPack2) : ""}
       ${config.controls.includes("brandPack") ? selectControl("brandPack", "Brand / Pack Group", filters.products, filters.brandPack) : ""}
       ${config.controls.includes("metric") ? selectControl("metric", "Metric", filters.priceMetrics || [], filters.metric) : ""}
       ${config.controls.includes("metricChange") ? selectControl("metricChange", "Metric Chg", filters.priceChangeMetrics || [], filters.metricChange) : ""}
@@ -962,6 +933,17 @@ function renderExecutiveToolbar(filters) {
 function selectControl(id, label, options, value) {
   return `
     <label class="control">
+      <span>${escapeHtml(label)}</span>
+      <select id="${id}">
+        ${options.map((option) => `<option value="${escapeHtml(option)}" ${option === value ? "selected" : ""}>${escapeHtml(option)}</option>`).join("")}
+      </select>
+    </label>
+  `;
+}
+
+function sectionSelectControl(id, label, options, value) {
+  return `
+    <label class="control section-control">
       <span>${escapeHtml(label)}</span>
       <select id="${id}">
         ${options.map((option) => `<option value="${escapeHtml(option)}" ${option === value ? "selected" : ""}>${escapeHtml(option)}</option>`).join("")}
@@ -1186,35 +1168,43 @@ function kpiTile(title, value, delta, iconName, caption) {
   `;
 }
 
-function renderCoffeeDashboard(dashboardView) {
+function renderCoffeeDashboard() {
   const dashboards = state.data.views?.coffeeDashboards || {};
-  if (dashboardView === "shareTrended") {
-    return renderShareTrendedDashboard(dashboards.shareTrended);
-  }
-  if (dashboardView === "priceCompare") {
-    return renderPriceCompareDashboard(dashboards.priceCompare);
-  }
-  return renderMarketViewDashboard(dashboards.marketView);
+  return `
+    <section class="dashboard-stack">
+      ${renderShareTrendedDashboard(dashboards.shareTrended)}
+      ${renderPriceCompareDashboard(dashboards.priceCompare)}
+      ${renderMarketViewDashboard(dashboards.marketView)}
+    </section>
+  `;
 }
 
 function renderShareTrendedDashboard(view) {
   if (!view) return emptyPanel("No share trend data for this selection.");
   return `
-    <section class="dashboard-chart-grid">
-      ${trendChartCard(
-        "Trended $ Shr Comparison",
-        `${state.data.filters.market} | Share benchmarked to Packaged Coffee & Instant Coffee`,
-        view.share,
-        (value) => percent(value, 1),
-        { scale: "share" },
-      )}
-      ${trendChartCard(
-        "Trended $ Shr Chg YA Comparison",
-        `${state.data.filters.market} | Latest 12 monthly periods`,
-        view.shareChange,
-        (value) => pointChange(value),
-        { scale: "change" },
-      )}
+    <section class="dashboard-section">
+      <header class="dashboard-section-header">
+        <div>
+          <h2>Share Trended</h2>
+          <span>${escapeHtml(state.data.filters.market)} | ${escapeHtml(state.data.filters.brandPack1)} vs ${escapeHtml(state.data.filters.brandPack2)}</span>
+        </div>
+      </header>
+      <section class="dashboard-chart-grid">
+        ${trendChartCard(
+          "Trended $ Shr Comparison",
+          "Share benchmarked to Packaged Coffee & Instant Coffee",
+          view.share,
+          (value) => percent(value, 1),
+          { scale: "share" },
+        )}
+        ${trendChartCard(
+          "Trended $ Shr Chg YA Comparison",
+          "Latest 12 monthly periods",
+          view.shareChange,
+          (value) => pointChange(value),
+          { scale: "change" },
+        )}
+      </section>
     </section>
   `;
 }
@@ -1222,21 +1212,33 @@ function renderShareTrendedDashboard(view) {
 function renderPriceCompareDashboard(view) {
   if (!view) return emptyPanel("No price comparison data for this selection.");
   return `
-    <section class="dashboard-chart-grid">
-      ${trendChartCard(
-        `Trended ${view.metric} Comparison`,
-        state.data.filters.market,
-        view.price,
-        (value) => priceMetricFormatter(view.metric, value),
-        { scale: "currency" },
-      )}
-      ${trendChartCard(
-        `Trended ${view.metricChange} Comparison`,
-        `${state.data.filters.market} | Latest 12 monthly periods`,
-        view.priceChange,
-        (value) => percent(value, 1),
-        { scale: "change" },
-      )}
+    <section class="dashboard-section">
+      <header class="dashboard-section-header">
+        <div>
+          <h2>Price Compare</h2>
+          <span>${escapeHtml(state.data.filters.market)} | ${escapeHtml(state.data.filters.brandPack1)} vs ${escapeHtml(state.data.filters.brandPack2)}</span>
+        </div>
+        <div class="section-controls">
+          ${sectionSelectControl("metric", "Metric", state.data.filters.priceMetrics || [], state.data.filters.metric)}
+          ${sectionSelectControl("metricChange", "Metric Chg", state.data.filters.priceChangeMetrics || [], state.data.filters.metricChange)}
+        </div>
+      </header>
+      <section class="dashboard-chart-grid">
+        ${trendChartCard(
+          `Trended ${view.metric} Comparison`,
+          state.data.filters.market,
+          view.price,
+          (value) => priceMetricFormatter(view.metric, value),
+          { scale: "currency" },
+        )}
+        ${trendChartCard(
+          `Trended ${view.metricChange} Comparison`,
+          "Latest 12 monthly periods",
+          view.priceChange,
+          (value) => percent(value, 1),
+          { scale: "change" },
+        )}
+      </section>
     </section>
   `;
 }
@@ -1244,20 +1246,31 @@ function renderPriceCompareDashboard(view) {
 function renderMarketViewDashboard(view) {
   if (!view) return emptyPanel("No market view data for this selection.");
   return `
-    <section class="market-view-split">
-      ${trendChartCard(
-        `${view.brandPack} Discount vs Conventional - $ Mkt Imp - 2 Years Trended`,
-        "National Conventional GDM vs National Discount GDM",
-        view.impact,
-        (value) => percent(value, 0),
-        { colors: ["#d56529", "#3f2021"], scale: "marketImpact", strokeWidth: 3.5 },
-      )}
-      <section class="dashboard-table-card market-view-card">
-        <header>
+    <section class="dashboard-section">
+      <header class="dashboard-section-header">
+        <div>
           <h2>Market View</h2>
-          <span>${escapeHtml(view.brandPack)} | ${escapeHtml(view.period)}</span>
-        </header>
-        ${marketViewTable(view.rows || [])}
+          <span>${escapeHtml(view.brandPack)} | Discount vs Conventional</span>
+        </div>
+      </header>
+      <section class="market-view-split">
+        ${trendChartCard(
+          `${view.brandPack} Discount vs Conventional - $ Mkt Imp - 2 Years Trended`,
+          "National Conventional GDM vs National Discount GDM",
+          view.impact,
+          (value) => percent(value, 0),
+          { colors: ["#d56529", "#3f2021"], scale: "marketImpact", strokeWidth: 3.5 },
+        )}
+        <section class="dashboard-table-card market-view-card">
+          <header>
+            <h2>Market View Table</h2>
+            <span>${escapeHtml(view.period)}</span>
+          </header>
+          <div class="section-controls market-view-controls">
+            ${sectionSelectControl("period", "Time Frame", state.data.filters.periods || [], state.data.filters.period)}
+          </div>
+          ${marketViewTable(view.rows || [])}
+        </section>
       </section>
     </section>
   `;
@@ -2592,6 +2605,12 @@ async function loadDashboard() {
   if (config.controls.includes("brandPack") && filters.brandPack) params.set("brandPack", filters.brandPack);
   if (config.controls.includes("metric") && filters.metric) params.set("metric", filters.metric);
   if (config.controls.includes("metricChange") && filters.metricChange) params.set("metricChange", filters.metricChange);
+  if (config.kind === "coffeeDashboard") {
+    if (filters.period) params.set("period", filters.period);
+    if (filters.metric) params.set("metric", filters.metric);
+    if (filters.metricChange) params.set("metricChange", filters.metricChange);
+    if (filters.brandPack1) params.set("brandPack", filters.brandPack1);
+  }
 
   try {
     const query = params.toString();
