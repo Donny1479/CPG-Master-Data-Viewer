@@ -855,13 +855,60 @@ select {
   stroke: var(--series-color);
   stroke-linecap: round;
   stroke-linejoin: round;
-  stroke-width: 4;
+  stroke-width: var(--series-width, 4px);
 }
 
 .chart-series circle {
   fill: #ffffff;
   stroke: var(--series-color);
   stroke-width: 3;
+}
+
+.chart-point {
+  cursor: crosshair;
+  transition: r 120ms ease, stroke-width 120ms ease;
+}
+
+.chart-point:hover {
+  r: 6;
+  stroke-width: 4;
+}
+
+.chart-tooltip {
+  background: #241f21;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 7px;
+  box-shadow: 0 14px 34px rgba(36, 31, 33, 0.28);
+  color: #ffffff;
+  display: grid;
+  gap: 4px;
+  left: 0;
+  max-width: 260px;
+  opacity: 0;
+  padding: 10px 12px;
+  pointer-events: none;
+  position: fixed;
+  top: 0;
+  transform: translateY(4px);
+  transition: opacity 120ms ease, transform 120ms ease;
+  z-index: 50;
+}
+
+.chart-tooltip.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.chart-tooltip strong,
+.chart-tooltip b {
+  font-size: 0.82rem;
+  line-height: 1.2;
+}
+
+.chart-tooltip span {
+  color: #e7d7ca;
+  font-size: 0.74rem;
+  font-weight: 760;
 }
 
 .chart-legend {
@@ -906,19 +953,128 @@ select {
 .dashboard-market-table td {
   border-bottom: 1px solid #ddd5cb;
   font-size: 0.84rem;
-  padding: 10px 12px;
+  padding: 9px 10px;
+  vertical-align: middle;
 }
 
 .dashboard-market-table thead th {
   background: #3b3032;
+  border-bottom: 2px solid #6f625f;
   color: #ffffff;
   position: sticky;
   top: 0;
+  z-index: 2;
 }
 
 .dashboard-market-table tbody th {
   color: #241f21;
   font-weight: 850;
+}
+
+.dashboard-market-table tbody tr.market-total th,
+.dashboard-market-table tbody tr.market-channel th,
+.dashboard-market-table tbody tr.market-retailer th {
+  font-weight: 920;
+}
+
+.dashboard-market-table tbody tr.market-total {
+  background: #f3ebe2;
+}
+
+.dashboard-market-table tbody tr.market-channel {
+  background: #fbf7f1;
+}
+
+.dashboard-market-table tbody tr.market-retailer {
+  background: #ffffff;
+}
+
+.dashboard-market-table tbody tr.market-division,
+.dashboard-market-table tbody tr.market-banner {
+  background: #fffdfa;
+}
+
+.market-label {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+  min-width: 330px;
+}
+
+.market-indent {
+  flex: 0 0 calc(var(--market-depth, 0) * 18px);
+}
+
+.market-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.market-type {
+  background: #efe5db;
+  border: 1px solid #d7c7b8;
+  border-radius: 999px;
+  color: #6b504a;
+  flex: 0 0 auto;
+  font-size: 0.64rem;
+  font-weight: 900;
+  padding: 2px 7px;
+  text-transform: uppercase;
+}
+
+.market-metric-box {
+  border: 1px solid #d7c7b8;
+  border-radius: 5px;
+  display: inline-flex;
+  font-weight: 900;
+  justify-content: flex-end;
+  min-width: 74px;
+  padding: 5px 8px;
+}
+
+.market-metric-box.share-high {
+  background: #e9f3ee;
+  border-color: #9bc6ad;
+  color: #0d7a45;
+}
+
+.market-metric-box.share-mid {
+  background: #f7efe2;
+  border-color: #d6b579;
+  color: #7a5521;
+}
+
+.market-metric-box.share-low {
+  background: #f7f2ed;
+  border-color: #ded0c5;
+  color: #5b5350;
+}
+
+.market-metric-box.positive,
+.market-metric-box.index-positive,
+.market-metric-box.index-high {
+  background: #e9f6ef;
+  border-color: #85bd9d;
+  color: #0d7a45 !important;
+}
+
+.market-metric-box.index-high {
+  background: #d7f0e2;
+}
+
+.market-metric-box.negative,
+.market-metric-box.index-low {
+  background: #fff0f0;
+  border-color: #e8a2a5;
+  color: #b21b25 !important;
+}
+
+.market-metric-box.index-soft,
+.market-metric-box.neutral {
+  background: #fff8e4;
+  border-color: #d8be76;
+  color: #6d5415 !important;
 }
 
 .panel header {

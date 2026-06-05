@@ -16,6 +16,7 @@ const COFFEE_DASHBOARD_BUSINESS = "coffee_dashboard";
 const DEFAULT_DASHBOARD_BRAND_PACK_1 = "Tim Hortons Single Serve";
 const DEFAULT_DASHBOARD_BRAND_PACK_2 = "Private Label Single Serve";
 const DEFAULT_MARKET_VIEW_BRAND_PACK = "Private Label Single Serve";
+const MARKET_VIEW_BASELINE_PRODUCT = "Packaged Coffee & Instant Coffee";
 const DEFAULT_PRICE_METRIC = "Avg Units Price";
 const DEFAULT_PRICE_CHANGE_METRIC = "Avg Units Price % Chg YA";
 
@@ -231,6 +232,41 @@ const CUSTOMER_MARKET_ORDER = [
   "SAVE ON FOODS WEST",
   "FEDERATED COOP",
 ];
+
+const MARKET_VIEW_MARKET_META = {
+  "NATIONAL EX NFLD GDM": { depth: 0, type: "Total" },
+  "NATIONAL CONVENTIONAL GDM": { depth: 0, type: "Channel" },
+  "NATIONAL DISCOUNT GDM": { depth: 0, type: "Channel" },
+  "Discount Excluding Walmart": { depth: 1, type: "Channel" },
+  "LCL NATIONAL": { depth: 0, type: "Retailer" },
+  "LCL NATIONAL SUPERMARKETS DIV": { depth: 1, type: "Division" },
+  "LCL NATIONAL MARKET DIVISION": { depth: 1, type: "Division" },
+  "FORTINO'S": { depth: 2, type: "Banner" },
+  "TOTAL RCSS": { depth: 2, type: "Banner" },
+  "RCSS ONTARIO": { depth: 3, type: "Banner" },
+  "RCSS TOTAL WEST": { depth: 3, type: "Banner" },
+  "LCL NATIONAL HARD DISCOUNT DIVISION": { depth: 1, type: "Division" },
+  "NO FRILLS NATIONAL": { depth: 2, type: "Banner" },
+  "LCL QUEBEC HARD DISCOUNT DIV": { depth: 2, type: "Division" },
+  "SDM NATIONAL": { depth: 1, type: "Banner" },
+  "SOBEYS INC NATIONAL INCL NFLD EX LAWTONS": { depth: 0, type: "Retailer" },
+  "SOBEYS FULL SERVICE NATIONAL INCL NFLD": { depth: 1, type: "Division" },
+  "FRESHCO": { depth: 1, type: "Banner" },
+  "TOTAL FRESHCO": { depth: 2, type: "Banner" },
+  "FRESHCO ONTARIO": { depth: 2, type: "Banner" },
+  "FRESHCO TOTAL WEST": { depth: 2, type: "Banner" },
+  "IGA QUEBEC": { depth: 1, type: "Banner" },
+  "METRO INC GROCERY BANNERS": { depth: 0, type: "Retailer" },
+  "METRO/FOOD BASICS ONTARIO": { depth: 1, type: "Division" },
+  "METRO ONTARIO": { depth: 2, type: "Banner" },
+  "FOOD BASICS ONTARIO": { depth: 2, type: "Banner" },
+  "METRO/SUPER C QUEBEC": { depth: 1, type: "Division" },
+  "METRO QUEBEC": { depth: 2, type: "Banner" },
+  "SUPER C QUEBEC": { depth: 2, type: "Banner" },
+  "CANADIAN TIRE NATIONAL": { depth: 0, type: "Retailer" },
+  "SAVE ON FOODS WEST": { depth: 0, type: "Retailer" },
+  "FEDERATED COOP": { depth: 0, type: "Retailer" },
+};
 
 function requiredEnv(name) {
   const value = process.env[name];
@@ -826,16 +862,25 @@ function makeSeriesPayload(periods, products, labels, points) {
   };
 }
 
-function marketViewRows(rows, period, product) {
+function marketViewRows(rows, baselineRows, period, product) {
   const lookup = dashboardRowLookup(rows);
+  const baselineLookup = dashboardRowLookup(baselineRows);
   return CUSTOMER_MARKET_ORDER.map((market) => {
     const row = findDashboardRow(lookup, market, period, product);
     if (!row) return null;
+    const share = numberValue(row.dollar_market_share_market);
+    const baselineShare = numberValue(
+      findDashboardRow(baselineLookup, market, period, MARKET_VIEW_BASELINE_PRODUCT)?.dollar_market_share_market,
+    );
+    const rawDevelopmentIndex = numberValue(row.dev_index);
+    const meta = MARKET_VIEW_MARKET_META[market] || { depth: 0, type: "Market" };
     return {
       market,
-      share: numberValue(row.dollar_market_share_market),
+      type: meta.type,
+      depth: meta.depth,
+      share,
       pointChange: numberValue(row.dollar_market_share_chg_ya_market),
-      developmentIndex: numberValue(row.dev_index),
+      developmentIndex: share != null && baselineShare ? (share / baselineShare) * 100 : rawDevelopmentIndex || null,
     };
   }).filter(Boolean);
 }
@@ -1132,11 +1177,12 @@ async function buildCoffeeDashboardPayload(cfg, context, request) {
     };
   }
 
-  const [marketRows, marketViewProductRows] = await Promise.all([
+  const [marketRows, marketViewProductRows, marketViewBaselineRows] = await Promise.all([
     fetchScorecardRows(cfg, importRunId, { market: selectedMarket }, 12000),
     fetchScorecardRows(cfg, importRunId, { product: selectedMarketBrandPack }, 2500),
+    fetchScorecardRows(cfg, importRunId, { product: MARKET_VIEW_BASELINE_PRODUCT }, 2500),
   ]);
-  const rows = dedupeRows([marketRows, marketViewProductRows]);
+  const rows = dedupeRows([marketRows, marketViewProductRows, marketViewBaselineRows]);
   const lookup = dashboardRowLookup(rows);
 
   const selectedProducts = [selectedBrandPack1, selectedBrandPack2];
@@ -1213,7 +1259,7 @@ async function buildCoffeeDashboardPayload(cfg, context, request) {
               },
             ],
           },
-          rows: marketViewRows(marketViewProductRows, selectedPeriod, selectedMarketBrandPack),
+          rows: marketViewRows(marketViewProductRows, marketViewBaselineRows, selectedPeriod, selectedMarketBrandPack),
         },
       },
     },

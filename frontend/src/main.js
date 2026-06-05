@@ -1204,12 +1204,14 @@ function renderShareTrendedDashboard(view) {
         `${state.data.filters.market} | Share benchmarked to Packaged Coffee & Instant Coffee`,
         view.share,
         (value) => percent(value, 1),
+        { scale: "share" },
       )}
       ${trendChartCard(
         "Trended $ Shr Chg YA Comparison",
         `${state.data.filters.market} | Latest 12 monthly periods`,
         view.shareChange,
         (value) => pointChange(value),
+        { scale: "change" },
       )}
     </section>
   `;
@@ -1224,12 +1226,14 @@ function renderPriceCompareDashboard(view) {
         state.data.filters.market,
         view.price,
         (value) => priceMetricFormatter(view.metric, value),
+        { scale: "currency" },
       )}
       ${trendChartCard(
         `Trended ${view.metricChange} Comparison`,
         `${state.data.filters.market} | Latest 12 monthly periods`,
         view.priceChange,
         (value) => percent(value, 1),
+        { scale: "change" },
       )}
     </section>
   `;
@@ -1244,6 +1248,7 @@ function renderMarketViewDashboard(view) {
         "National Conventional GDM vs National Discount GDM",
         view.impact,
         (value) => percent(value, 0),
+        { colors: ["#d56529", "#3f2021"], scale: "marketImpact", strokeWidth: 3.5 },
       )}
     </section>
     <section class="dashboard-table-card">
@@ -1261,19 +1266,19 @@ function priceMetricFormatter(metric, value) {
   return valueNumber(value, 1);
 }
 
-function trendChartCard(title, subtitle, chartData, formatter) {
+function trendChartCard(title, subtitle, chartData, formatter, options = {}) {
   return `
     <article class="dashboard-chart-card">
       <header>
         <h2>${escapeHtml(title)}</h2>
         <span>${escapeHtml(subtitle)}</span>
       </header>
-      ${lineChart(chartData, formatter)}
+      ${lineChart(chartData, formatter, options)}
     </article>
   `;
 }
 
-function lineChart(chartData, formatter) {
+function lineChart(chartData, formatter, options = {}) {
   const periods = chartData?.periods || [];
   const series = chartData?.series || [];
   const values = series.flatMap((item) => item.values || []).filter((value) => Number.isFinite(value));
@@ -1281,35 +1286,25 @@ function lineChart(chartData, formatter) {
     return emptyPanel("No chart data for this selection.");
   }
 
-  let min = Math.min(...values);
-  let max = Math.max(...values);
-  if (min === max) {
-    min -= 1;
-    max += 1;
-  }
-  const padding = (max - min) * 0.12;
-  min -= padding;
-  max += padding;
-
+  const scale = chartScale(values, options.scale);
   const width = 900;
   const height = 360;
-  const left = 72;
-  const right = 24;
+  const left = 82;
+  const right = 30;
   const top = 24;
-  const bottom = 66;
+  const bottom = 72;
   const plotWidth = width - left - right;
   const plotHeight = height - top - bottom;
-  const colors = ["#b21b25", "#0f7a79", "#d69a2d", "#566d7c"];
+  const colors = options.colors || ["#b21b25", "#0f7a79", "#d69a2d", "#566d7c"];
   const xFor = (index) => left + (periods.length === 1 ? plotWidth / 2 : (plotWidth * index) / (periods.length - 1));
-  const yFor = (value) => top + ((max - value) / (max - min)) * plotHeight;
-  const ticks = Array.from({ length: 5 }, (_, index) => min + ((max - min) * index) / 4);
-  const labelEvery = Math.max(1, Math.ceil(periods.length / 8));
+  const yFor = (value) => top + ((scale.max - value) / (scale.max - scale.min)) * plotHeight;
+  const labelEvery = Math.max(1, Math.ceil(periods.length / (periods.length <= 14 ? periods.length : 13)));
 
   return `
     <div class="line-chart">
       <svg viewBox="0 0 ${width} ${height}" role="img" aria-label="${escapeHtml(series.map((item) => item.label).join(" compared to "))}">
         <g class="chart-grid">
-          ${ticks
+          ${scale.ticks
             .map((tick) => {
               const y = yFor(tick);
               return `
@@ -1337,11 +1332,11 @@ function lineChart(chartData, formatter) {
             const points = (item.values || [])
               .map((value, index) =>
                 Number.isFinite(value)
-                  ? `<circle cx="${xFor(index)}" cy="${yFor(value)}" r="4"><title>${escapeHtml(`${item.label} | ${periods[index]} | ${formatter(value)}`)}</title></circle>`
+                  ? `<circle class="chart-point" cx="${xFor(index)}" cy="${yFor(value)}" r="4.5" data-series="${escapeHtml(item.label)}" data-period="${escapeHtml(periods[index])}" data-value="${escapeHtml(formatter(value))}"></circle>`
                   : "",
               )
               .join("");
-            return `<g class="chart-series" style="--series-color:${color}"><path d="${path}"></path>${points}</g>`;
+            return `<g class="chart-series" style="--series-color:${color};--series-width:${options.strokeWidth || 4}px"><path d="${path}"></path>${points}</g>`;
           })
           .join("")}
       </svg>
@@ -1356,6 +1351,77 @@ function lineChart(chartData, formatter) {
       </div>
     </div>
   `;
+}
+
+function chartScale(values, scaleType) {
+  if (scaleType === "marketImpact") {
+    const maxValue = Math.max(...values, 0);
+    const step = niceStep(maxValue || 1, 8);
+    const max = Math.max(step, Math.ceil(maxValue / step) * step);
+    return { min: 0, max, ticks: ticksForScale(0, max, step) };
+  }
+
+  let minValue = Math.min(...values);
+  let maxValue = Math.max(...values);
+  if (minValue === maxValue) {
+    const fallback = Math.abs(minValue) >= 10 ? Math.abs(minValue) * 0.1 : 1;
+    minValue -= fallback;
+    maxValue += fallback;
+  }
+
+  if (scaleType === "change") {
+    minValue = Math.min(minValue, 0);
+    maxValue = Math.max(maxValue, 0);
+  }
+
+  const range = maxValue - minValue || 1;
+  const padding = range * 0.06;
+  const targetTicks = scaleType === "currency" ? 6 : 7;
+  let step = niceStep(range + padding * 2, targetTicks);
+  let min = Math.floor((minValue - padding) / step) * step;
+  let max = Math.ceil((maxValue + padding) / step) * step;
+
+  if ((scaleType === "share" || scaleType === "currency") && minValue >= 0 && min < 0) {
+    min = 0;
+  }
+
+  let ticks = ticksForScale(min, max, step);
+  if (ticks.length > 9) {
+    step = niceStep(max - min, 6);
+    min = Math.floor(min / step) * step;
+    max = Math.ceil(max / step) * step;
+    ticks = ticksForScale(min, max, step);
+  }
+
+  if (max <= min) {
+    max = min + step;
+    ticks = [min, max];
+  }
+
+  return { min, max, ticks };
+}
+
+function niceStep(range, targetTicks) {
+  const roughStep = Math.abs(range) / Math.max(1, targetTicks - 1);
+  if (!roughStep) return 1;
+  const power = 10 ** Math.floor(Math.log10(roughStep));
+  const fraction = roughStep / power;
+  let niceFraction = 10;
+  if (fraction <= 1) niceFraction = 1;
+  else if (fraction <= 2) niceFraction = 2;
+  else if (fraction <= 2.5) niceFraction = 2.5;
+  else if (fraction <= 5) niceFraction = 5;
+  return niceFraction * power;
+}
+
+function ticksForScale(min, max, step) {
+  const ticks = [];
+  const precision = Math.max(0, Math.ceil(-Math.log10(step)) + 2);
+  for (let value = min; value <= max + step / 2; value += step) {
+    const rounded = Number(value.toFixed(precision));
+    ticks.push(Object.is(rounded, -0) ? 0 : rounded);
+  }
+  return ticks;
 }
 
 function linePath(values, xFor, yFor) {
@@ -1388,16 +1454,24 @@ function marketViewTable(rows) {
         </thead>
         <tbody>
           ${rows
-            .map(
-              (row) => `
-                <tr>
-                  <th>${escapeHtml(row.market)}</th>
-                  <td>${percent(row.share, 0)}</td>
-                  <td class="${deltaClass(row.pointChange)}">${pointChange(row.pointChange)}</td>
-                  <td class="${indexClass(row.developmentIndex)}">${indexValue(row.developmentIndex)}</td>
+            .map((row) => {
+              const depth = Math.max(0, Number(row.depth) || 0);
+              const type = row.type || "Market";
+              return `
+                <tr class="market-row market-${cssToken(type)}" style="--market-depth:${depth}">
+                  <th>
+                    <span class="market-label">
+                      <span class="market-indent"></span>
+                      <span class="market-name">${escapeHtml(row.market)}</span>
+                      <span class="market-type">${escapeHtml(type)}</span>
+                    </span>
+                  </th>
+                  <td>${marketMetricBox(percent(row.share, 1), marketShareClass(row.share))}</td>
+                  <td>${marketMetricBox(pointChange(row.pointChange), deltaClass(row.pointChange))}</td>
+                  <td>${marketMetricBox(indexValue(row.developmentIndex), marketIndexClass(row.developmentIndex))}</td>
                 </tr>
-              `,
-            )
+              `;
+            })
             .join("")}
         </tbody>
       </table>
@@ -1405,11 +1479,38 @@ function marketViewTable(rows) {
   `;
 }
 
+function marketMetricBox(label, className) {
+  return `<span class="market-metric-box ${escapeHtml(className || "neutral")}">${escapeHtml(label)}</span>`;
+}
+
+function marketShareClass(value) {
+  if (value == null) return "neutral";
+  if (value >= 35) return "share-high";
+  if (value >= 15) return "share-mid";
+  return "share-low";
+}
+
+function marketIndexClass(value) {
+  if (value == null) return "neutral";
+  if (value < 85) return "index-low";
+  if (value < 100) return "index-soft";
+  if (value >= 125) return "index-high";
+  if (value > 100) return "index-positive";
+  return "neutral";
+}
+
 function indexClass(value) {
   if (value == null) return "neutral";
   if (value < 100) return "negative";
   if (value > 100) return "positive";
   return "neutral";
+}
+
+function cssToken(value) {
+  return String(value || "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
 }
 
 function dashboardScorecard(sections, overview) {
@@ -2302,6 +2403,7 @@ function bindInteractions() {
   bindFilter("brandPack");
   bindFilter("metric");
   bindFilter("metricChange");
+  bindChartTooltips();
 
   const competitorMode = document.querySelector("#competitorMode");
   competitorMode?.addEventListener("change", (event) => {
@@ -2345,6 +2447,46 @@ function bindInteractions() {
 
   document.querySelector("#logoutButton")?.addEventListener("click", () => {
     signOut();
+  });
+}
+
+function bindChartTooltips() {
+  let tooltip = document.querySelector("#chartTooltip");
+  if (!tooltip) {
+    tooltip = document.createElement("div");
+    tooltip.id = "chartTooltip";
+    tooltip.className = "chart-tooltip";
+    document.body.appendChild(tooltip);
+  }
+  tooltip.classList.remove("visible");
+
+  const hideTooltip = () => {
+    tooltip.classList.remove("visible");
+  };
+
+  const moveTooltip = (event) => {
+    const offset = 14;
+    const width = tooltip.offsetWidth || 190;
+    const height = tooltip.offsetHeight || 76;
+    const left = Math.min(window.innerWidth - width - 12, event.clientX + offset);
+    const top = Math.min(window.innerHeight - height - 12, event.clientY + offset);
+    tooltip.style.left = `${Math.max(12, left)}px`;
+    tooltip.style.top = `${Math.max(12, top)}px`;
+  };
+
+  document.querySelectorAll(".chart-point").forEach((point) => {
+    point.addEventListener("mouseenter", (event) => {
+      const target = event.currentTarget;
+      tooltip.innerHTML = `
+        <strong>${escapeHtml(target.dataset.series || "")}</strong>
+        <span>${escapeHtml(target.dataset.period || "")}</span>
+        <b>${escapeHtml(target.dataset.value || "")}</b>
+      `;
+      tooltip.classList.add("visible");
+      moveTooltip(event);
+    });
+    point.addEventListener("mousemove", moveTooltip);
+    point.addEventListener("mouseleave", hideTooltip);
   });
 }
 
