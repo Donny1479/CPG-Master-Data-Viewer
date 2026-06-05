@@ -167,6 +167,7 @@ const CUSTOMER_MARKET_ORDER = [
   "SOBEYS INC NATIONAL INCL NFLD EX LAWTONS",
   "SOBEYS FULL SERVICE NATIONAL INCL NFLD",
   "FRESHCO",
+  "TOTAL FRESHCO",
   "FRESHCO ONTARIO",
   "FRESHCO TOTAL WEST",
   "IGA QUEBEC",
@@ -939,9 +940,18 @@ export default async function handler(request, response) {
     if (requestedBusiness === ALL_BUSINESSES) {
       const coffeeContext = selectImportContext(contexts, "coffee");
       const soupContext = selectImportContext(contexts, "soup_chili");
+      const selectedMarket = queryValue(request.query.market);
+      const selectedCoffeePeriod = queryValue(request.query.period);
+      const selectedSoupPeriod = queryValue(request.query.soupPeriod) || selectedCoffeePeriod;
       const [coffee, soupChili] = await Promise.all([
-        buildBusinessDashboardPayload(cfg, coffeeContext, request, "coffee"),
-        buildBusinessDashboardPayload(cfg, soupContext, request, "soup_chili"),
+        buildBusinessDashboardPayload(cfg, coffeeContext, request, "coffee", {
+          market: selectedMarket,
+          period: selectedCoffeePeriod,
+        }),
+        buildBusinessDashboardPayload(cfg, soupContext, request, "soup_chili", {
+          market: selectedMarket,
+          period: selectedSoupPeriod,
+        }),
       ]);
       const loadedRows = (coffee.counts?.loadedRows || 0) + (soupChili.counts?.loadedRows || 0);
       const apiRowsLoaded = (coffee.counts?.apiRowsLoaded || 0) + (soupChili.counts?.apiRowsLoaded || 0);

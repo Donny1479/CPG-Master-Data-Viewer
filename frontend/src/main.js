@@ -25,6 +25,10 @@ const BUSINESS_LABELS = {
   [BUSINESS_ALL]: "All Insights",
 };
 
+function defaultExecutiveExpanded() {
+  return new Set([`${BUSINESS_SOUP}:executive:total`]);
+}
+
 const VIEW_CONFIGS = [
   {
     id: "executiveSummary",
@@ -491,6 +495,7 @@ const CUSTOMER_TREE = [
       { market: "SOBEYS FULL SERVICE NATIONAL INCL NFLD" },
       {
         market: "FRESHCO",
+        aliases: ["TOTAL FRESHCO"],
         children: [
           { market: "FRESHCO ONTARIO" },
           { market: "FRESHCO TOTAL WEST" },
@@ -535,11 +540,11 @@ const state = {
     user: null,
     error: null,
   },
-  executiveExpanded: new Set(),
+  executiveExpanded: defaultExecutiveExpanded(),
   categoryExpanded: new Set(),
   customerSummaryExpanded: new Set(),
   customerDetailExpanded: new Set(),
-  navGroupsExpanded: new Set([BUSINESS_COFFEE, BUSINESS_SOUP]),
+  navGroupsExpanded: new Set(),
   viewFilters: {},
 };
 
@@ -554,6 +559,7 @@ function defaultFilters(config) {
     market: config.defaultMarket || DEFAULT_MARKET,
     benchmarkMarket: config.defaultBenchmarkMarket || DEFAULT_MARKET,
     period: config.defaultPeriod || "",
+    soupPeriod: config.defaultSoupPeriod || config.defaultPeriod || "",
     product: config.defaultProduct || "Tim Hortons",
     competitorMode: "aggregate",
   };
@@ -671,11 +677,11 @@ function trendDirection(value) {
 
 function resetSessionViewState() {
   state.activeView = "executiveSummary";
-  state.executiveExpanded = new Set();
+  state.executiveExpanded = defaultExecutiveExpanded();
   state.categoryExpanded = new Set();
   state.customerSummaryExpanded = new Set();
   state.customerDetailExpanded = new Set();
-  state.navGroupsExpanded = new Set([BUSINESS_COFFEE, BUSINESS_SOUP]);
+  state.navGroupsExpanded = new Set();
   state.viewFilters = {};
 }
 
@@ -864,12 +870,30 @@ function renderActiveView() {
 }
 
 function renderToolbar(config, filters) {
+  if (config.kind === "executive") {
+    return renderExecutiveToolbar(filters);
+  }
   return `
     <section class="toolbar">
       ${config.controls.includes("market") ? selectControl("market", "Market / Customer / Banner", filters.markets, filters.market) : ""}
       ${config.controls.includes("benchmarkMarket") ? selectControl("benchmarkMarket", "Benchmark", filters.markets, filters.benchmarkMarket) : ""}
       ${config.controls.includes("product") ? selectControl("product", "Manufacturer / Brand / Pack Group", filters.products, filters.product) : ""}
       ${config.controls.includes("period") ? selectControl("period", "Time Frame", filters.periods, filters.period) : ""}
+    </section>
+  `;
+}
+
+function renderExecutiveToolbar(filters) {
+  const coffee = businessData(BUSINESS_COFFEE);
+  const soup = businessData(BUSINESS_SOUP);
+  const marketOptions = coffee?.filters?.markets || filters.markets || [];
+  const coffeePeriods = coffee?.filters?.periods || filters.periods || [];
+  const soupPeriods = soup?.filters?.periods || [];
+  return `
+    <section class="toolbar">
+      ${selectControl("market", "Market / Customer / Banner", marketOptions, coffee?.filters?.market || filters.market)}
+      ${selectControl("period", "Coffee Time Frame", coffeePeriods, coffee?.filters?.period || filters.period)}
+      ${selectControl("soupPeriod", "Soup & Chili Time Frame", soupPeriods, soup?.filters?.period || filters.soupPeriod)}
     </section>
   `;
 }
@@ -1231,11 +1255,12 @@ function renderCategorySummary() {
   const tree = categorySummaryTree();
   const rows = flattenCategoryTree(tree);
   const label = businessLabel();
+  const showVisibleRows = activeBusiness() !== BUSINESS_SOUP;
   return `
     <section class="view-strip">
       ${metricPill("Market", state.data.filters.market)}
       ${metricPill("Time Frame", state.data.filters.period)}
-      ${metricPill("Visible Rows", rows.length.toLocaleString())}
+      ${showVisibleRows ? metricPill("Visible Rows", rows.length.toLocaleString()) : ""}
     </section>
     <section class="category-summary-card">
       <header>
@@ -1301,7 +1326,7 @@ function soupCategoryNode(lookup, definition, parentKey, isRoot = false) {
     key,
     label: definition.label,
     row: findCategoryRow(lookup, sourcePullType, definition.product),
-    kind: isRoot ? "total" : definition.children?.length ? "brand" : "detail",
+    kind: isRoot ? "total" : "detail",
     children: (definition.children || []).map((child) => soupCategoryNode(lookup, { ...child, sourcePullType }, key)),
   });
 }
@@ -1535,11 +1560,12 @@ function renderCategoryDetail() {
   const tree = categorySummaryTree();
   const rows = flattenCategoryTree(tree);
   const label = businessLabel();
+  const showVisibleRows = activeBusiness() !== BUSINESS_SOUP;
   return `
     <section class="view-strip">
       ${metricPill("Market", state.data.filters.market)}
       ${metricPill("Time Frame", state.data.filters.period)}
-      ${metricPill("Visible Rows", rows.length.toLocaleString())}
+      ${showVisibleRows ? metricPill("Visible Rows", rows.length.toLocaleString()) : ""}
     </section>
     <section class="workbook-card">
       <header>
@@ -1606,11 +1632,12 @@ function categoryBrandLabel(node) {
 function renderCustomerSummary() {
   const rows = flattenCustomerTree(customerTree(), state.customerSummaryExpanded);
   const label = businessLabel();
+  const showVisibleRows = activeBusiness() !== BUSINESS_SOUP;
   return `
     <section class="view-strip">
       ${metricPill("Product", state.data.filters.product)}
       ${metricPill("Time Frame", state.data.filters.period)}
-      ${metricPill("Visible Rows", rows.length.toLocaleString())}
+      ${showVisibleRows ? metricPill("Visible Rows", rows.length.toLocaleString()) : ""}
     </section>
     <section class="workbook-card">
       <header>
@@ -1625,11 +1652,12 @@ function renderCustomerSummary() {
 function renderCustomerDetail() {
   const rows = flattenCustomerTree(customerTree(), state.customerDetailExpanded);
   const label = businessLabel();
+  const showVisibleRows = activeBusiness() !== BUSINESS_SOUP;
   return `
     <section class="view-strip">
       ${metricPill("Product", state.data.filters.product)}
       ${metricPill("Period", state.data.filters.period)}
-      ${metricPill("Visible Rows", rows.length.toLocaleString())}
+      ${showVisibleRows ? metricPill("Visible Rows", rows.length.toLocaleString()) : ""}
     </section>
     <section class="workbook-card">
       <header>
@@ -1657,13 +1685,14 @@ function customerTree() {
 function collectCustomerMarkets(definitions, output) {
   definitions.forEach((definition) => {
     output.add(definition.market);
+    (definition.aliases || []).forEach((alias) => output.add(alias));
     collectCustomerMarkets(definition.children || [], output);
   });
 }
 
 function customerNode(definition, lookup) {
   const children = (definition.children || []).map((child) => customerNode(child, lookup)).filter(Boolean);
-  const row = lookup.get(definition.market) || null;
+  const row = customerLookupRow(lookup, definition);
   if (!row && !children.length) return null;
   return {
     key: `customer:${definition.market}`,
@@ -1672,6 +1701,12 @@ function customerNode(definition, lookup) {
     kind: definition.kind || (children.length ? "group" : "market"),
     children,
   };
+}
+
+function customerLookupRow(lookup, definition) {
+  const rows = [definition.market, ...(definition.aliases || [])].map((market) => lookup.get(market)).filter(Boolean);
+  if (!rows.length) return null;
+  return rows.find((row) => (row.dollarSales000 || 0) > 0) || rows[0];
 }
 
 function flattenCustomerTree(nodes, expandedSet, depth = 0) {
@@ -1973,6 +2008,7 @@ function bindInteractions() {
   bindFilter("market");
   bindFilter("benchmarkMarket");
   bindFilter("period");
+  bindFilter("soupPeriod");
   bindFilter("product");
 
   const competitorMode = document.querySelector("#competitorMode");
@@ -2077,6 +2113,7 @@ async function loadDashboard() {
   if (config.controls.includes("market") && filters.market) params.set("market", filters.market);
   if (config.controls.includes("benchmarkMarket") && filters.benchmarkMarket) params.set("benchmarkMarket", filters.benchmarkMarket);
   if (config.controls.includes("period") && filters.period) params.set("period", filters.period);
+  if (config.kind === "executive" && filters.soupPeriod) params.set("soupPeriod", filters.soupPeriod);
   if (config.controls.includes("product") && filters.product) params.set("product", filters.product);
 
   try {
@@ -2103,6 +2140,7 @@ async function loadDashboard() {
       market: payload.filters.market,
       benchmarkMarket: payload.filters.benchmarkMarket,
       period: payload.filters.period,
+      soupPeriod: payload.businesses?.soupChili?.filters?.period || filters.soupPeriod || payload.filters.period,
       product: payload.filters.product,
     };
   } catch (error) {
