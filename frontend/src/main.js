@@ -586,6 +586,7 @@ const state = {
   categoryExpanded: new Set(),
   customerSummaryExpanded: new Set(),
   customerDetailExpanded: new Set(),
+  marketViewExpanded: new Set(),
   navGroupsExpanded: new Set(),
   viewFilters: {},
 };
@@ -728,6 +729,7 @@ function resetSessionViewState() {
   state.categoryExpanded = new Set();
   state.customerSummaryExpanded = new Set();
   state.customerDetailExpanded = new Set();
+  state.marketViewExpanded = new Set();
   state.navGroupsExpanded = new Set();
   state.viewFilters = {};
 }
@@ -1242,7 +1244,7 @@ function renderPriceCompareDashboard(view) {
 function renderMarketViewDashboard(view) {
   if (!view) return emptyPanel("No market view data for this selection.");
   return `
-    <section class="dashboard-chart-grid single">
+    <section class="market-view-split">
       ${trendChartCard(
         `${view.brandPack} Discount vs Conventional - $ Mkt Imp - 2 Years Trended`,
         "National Conventional GDM vs National Discount GDM",
@@ -1250,13 +1252,13 @@ function renderMarketViewDashboard(view) {
         (value) => percent(value, 0),
         { colors: ["#d56529", "#3f2021"], scale: "marketImpact", strokeWidth: 3.5 },
       )}
-    </section>
-    <section class="dashboard-table-card">
-      <header>
-        <h2>Market View</h2>
-        <span>${escapeHtml(view.brandPack)} | ${escapeHtml(view.period)}</span>
-      </header>
-      ${marketViewTable(view.rows || [])}
+      <section class="dashboard-table-card market-view-card">
+        <header>
+          <h2>Market View</h2>
+          <span>${escapeHtml(view.brandPack)} | ${escapeHtml(view.period)}</span>
+        </header>
+        ${marketViewTable(view.rows || [])}
+      </section>
     </section>
   `;
 }
@@ -1298,7 +1300,8 @@ function lineChart(chartData, formatter, options = {}) {
   const colors = options.colors || ["#b21b25", "#0f7a79", "#d69a2d", "#566d7c"];
   const xFor = (index) => left + (periods.length === 1 ? plotWidth / 2 : (plotWidth * index) / (periods.length - 1));
   const yFor = (value) => top + ((scale.max - value) / (scale.max - scale.min)) * plotHeight;
-  const labelEvery = Math.max(1, Math.ceil(periods.length / (periods.length <= 14 ? periods.length : 13)));
+  const maxXLabels = periods.length <= 10 ? periods.length : 7;
+  const labelEvery = Math.max(1, Math.ceil(periods.length / maxXLabels));
 
   return `
     <div class="line-chart">
@@ -1441,62 +1444,97 @@ function linePath(values, xFor, yFor) {
 
 function marketViewTable(rows) {
   if (!rows.length) return emptyPanel("No market rows for this time frame and brand/pack group.");
+  const treeRows = flattenMarketViewTree(marketViewTree(rows), state.marketViewExpanded);
   return `
     <div class="dashboard-table-wrap">
-      <table class="dashboard-market-table">
+      <table class="workbook-table market-view-table">
+        <colgroup>
+          <col class="market-view-label-col">
+          <col class="market-view-metric-col">
+          <col class="market-view-metric-col">
+          <col class="market-view-metric-col">
+        </colgroup>
         <thead>
-          <tr>
-            <th>Market / Customer / Banner</th>
+          <tr class="workbook-column-row">
+            <th class="sticky-one">Market / Customer / Banner</th>
             <th>$ Mkt Shr</th>
             <th>Pt Chg</th>
             <th>Development Index</th>
           </tr>
         </thead>
         <tbody>
-          ${rows
-            .map((row) => {
-              const depth = Math.max(0, Number(row.depth) || 0);
-              const type = row.type || "Market";
-              return `
-                <tr class="market-row market-${cssToken(type)}" style="--market-depth:${depth}">
-                  <th>
-                    <span class="market-label">
-                      <span class="market-indent"></span>
-                      <span class="market-name">${escapeHtml(row.market)}</span>
-                      <span class="market-type">${escapeHtml(type)}</span>
-                    </span>
-                  </th>
-                  <td>${marketMetricBox(percent(row.share, 1), marketShareClass(row.share))}</td>
-                  <td>${marketMetricBox(pointChange(row.pointChange), deltaClass(row.pointChange))}</td>
-                  <td>${marketMetricBox(indexValue(row.developmentIndex), marketIndexClass(row.developmentIndex))}</td>
-                </tr>
-              `;
-            })
-            .join("")}
+          ${treeRows.map(marketViewTableRow).join("")}
         </tbody>
       </table>
     </div>
   `;
 }
 
-function marketMetricBox(label, className) {
-  return `<span class="market-metric-box ${escapeHtml(className || "neutral")}">${escapeHtml(label)}</span>`;
+function marketViewTree(rows) {
+  const lookup = new Map(rows.map((row) => [row.market, row]));
+  return CUSTOMER_TREE.filter((definition) => definition.market !== "All Markets/Customers/Banners")
+    .map((definition) => marketViewNode(definition, lookup))
+    .filter(Boolean);
 }
 
-function marketShareClass(value) {
-  if (value == null) return "neutral";
-  if (value >= 35) return "share-high";
-  if (value >= 15) return "share-mid";
-  return "share-low";
+function marketViewNode(definition, lookup) {
+  const children = (definition.children || []).map((child) => marketViewNode(child, lookup)).filter(Boolean);
+  const row = marketViewLookupRow(lookup, definition);
+  if (!row && !children.length) return null;
+  return {
+    key: `market-view:${definition.market}`,
+    label: definition.market,
+    row,
+    kind: definition.kind || (children.length ? "group" : "market"),
+    children,
+  };
 }
 
-function marketIndexClass(value) {
-  if (value == null) return "neutral";
-  if (value < 85) return "index-low";
-  if (value < 100) return "index-soft";
-  if (value >= 125) return "index-high";
-  if (value > 100) return "index-positive";
-  return "neutral";
+function marketViewLookupRow(lookup, definition) {
+  const rows = [definition.market, ...(definition.aliases || [])].map((market) => lookup.get(market)).filter(Boolean);
+  if (!rows.length) return null;
+  return rows.find((row) => row.share != null) || rows[0];
+}
+
+function flattenMarketViewTree(nodes, expandedSet, depth = 0) {
+  return nodes.flatMap((node) => {
+    const row = { ...node, depth, isExpanded: expandedSet.has(node.key) };
+    if (!row.isExpanded || !node.children.length) return [row];
+    return [row, ...flattenMarketViewTree(node.children, expandedSet, depth + 1)];
+  });
+}
+
+function marketViewTableRow(node) {
+  const expandable = node.children.length > 0;
+  return `
+    <tr class="workbook-row market-view-row customer-${node.kind} depth-${node.depth}">
+      <th class="sticky-one hierarchy-label">
+        <span class="tree-indent" style="--depth:${node.depth}"></span>
+        ${
+          expandable
+            ? `<button class="tree-toggle" type="button" aria-expanded="${node.isExpanded ? "true" : "false"}" data-market-view-toggle="${escapeHtml(node.key)}">${node.isExpanded ? "-" : "+"}</button>`
+            : `<span class="tree-spacer"></span>`
+        }
+        <span>${escapeHtml(node.label)}</span>
+      </th>
+      <td class="neutral">${escapeHtml(percent(node.row?.share, 1))}</td>
+      ${marketViewChangeCell(node.row?.pointChange)}
+      <td class="${indexClass(node.row?.developmentIndex)}">${escapeHtml(indexValue(node.row?.developmentIndex))}</td>
+    </tr>
+  `;
+}
+
+function marketViewChangeCell(value) {
+  const direction = trendDirection(value);
+  const className = deltaClass(value);
+  return `
+    <td class="change-metric metric-trend ${direction} ${className}">
+      <span class="metric-trend-value">
+        <span class="trend-marker ${direction}" aria-hidden="true"></span>
+        <span>${escapeHtml(pointChange(value))}</span>
+      </span>
+    </td>
+  `;
 }
 
 function indexClass(value) {
@@ -1504,13 +1542,6 @@ function indexClass(value) {
   if (value < 100) return "negative";
   if (value > 100) return "positive";
   return "neutral";
-}
-
-function cssToken(value) {
-  return String(value || "")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "");
 }
 
 function dashboardScorecard(sections, overview) {
@@ -2445,6 +2476,13 @@ function bindInteractions() {
     });
   });
 
+  document.querySelectorAll("[data-market-view-toggle]").forEach((button) => {
+    button.addEventListener("click", () => {
+      toggleSetValue(state.marketViewExpanded, button.dataset.marketViewToggle);
+      renderPreservingTableScroll();
+    });
+  });
+
   document.querySelector("#logoutButton")?.addEventListener("click", () => {
     signOut();
   });
@@ -2513,7 +2551,7 @@ function toggleSetValue(set, value) {
 }
 
 function activeTableScroller() {
-  return document.querySelector(".workbook-table-wrap, .category-table-wrap, .scorecard-wrap");
+  return document.querySelector(".workbook-table-wrap, .category-table-wrap, .dashboard-table-wrap, .scorecard-wrap");
 }
 
 function renderPreservingTableScroll() {
