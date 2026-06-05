@@ -145,3 +145,21 @@ The soup/chili compiler auto-detects the three Nielsen raw tabs:
 - Chili
 
 Coffee and soup/chili imports are tracked as separate business datasets, so a new soup import will not replace the coffee dashboards and a new coffee import will not replace the soup dashboards.
+
+## Import The Coffee Dashboard Workbook
+
+The expanded coffee dashboard tabs are imported as a separate `coffee_dashboard` dataset. This compiler reads the four raw dashboard tabs and derives the chart-ready period/product fields internally; it does not depend on future `MasterTable` uploads.
+
+```powershell
+python -m backend.import_nielsen_pulls --business coffee_dashboard "C:\path\to\July_Dashboard_Coffee Category.xlsm" --dry-run
+python -m backend.import_nielsen_pulls --business coffee_dashboard "C:\path\to\July_Dashboard_Coffee Category.xlsm"
+```
+
+The raw tabs expected by the compiler are:
+
+- `1-Topline Brands`
+- `2-Single Serve`
+- `3-Instant`
+- `4-R&G`
+
+The first three website dashboard tabs built from this dataset are Share Trended, Price Compare, and Market View.

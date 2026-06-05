@@ -10,7 +10,9 @@ IMPORT_METADATA_TABLE_NAME = "Import Metadata"
 EXCEL_TO_APPWRITE_COLUMN = {
     "Markets": "market",
     "Periods": "period",
+    "Combined Period": "period",
     "Products": "product",
+    "$": "dollar_sales",
     "$ Shr - Product": "dollar_share_product",
     "$ Shr Chg YA - Product": "dollar_share_chg_ya_product",
     "$ (000)": "dollar_sales_000",
@@ -31,6 +33,10 @@ EXCEL_TO_APPWRITE_COLUMN = {
     "Avg Pounds Price % Chg YA": "avg_pounds_price_pct_chg_ya",
     "Avg KGS Price": "avg_pounds_price",
     "Avg KGS Price % Chg YA": "avg_pounds_price_pct_chg_ya",
+    "Any Promo Pounds Price": "any_promo_pounds_price",
+    "Any Promo Pounds Price % Chg YA": "any_promo_pounds_price_pct_chg_ya",
+    "No Promo Pounds Price": "no_promo_pounds_price",
+    "No Promo Pounds Price % Chg YA": "no_promo_pounds_price_pct_chg_ya",
     "Units (000)": "units_000",
     "Units (000) Chg YA": "units_chg_ya_000",
     "Avg Units Price": "avg_units_price",
@@ -40,6 +46,11 @@ EXCEL_TO_APPWRITE_COLUMN = {
     "No Promo Units Price % Chg YA": "no_promo_units_price_pct_chg_ya",
     "Any Promo Units Price": "any_promo_units_price",
     "Any Promo Units Price % Chg YA": "any_promo_units_price_pct_chg_ya",
+    "$ Mkt Shr - Market": "dollar_market_share_market",
+    "$ Mkt Shr Chg YA - Market": "dollar_market_share_chg_ya_market",
+    "Dev Index": "dev_index",
+    "$ Shr of Distribution (TDP) on Display": "display_distribution_share",
+    "$ Shr of TDP - Any Display": "any_display_tdp_share",
     "% Sold on Promotion": "sold_on_promo_pct",
     "% Sold on Promotion Chg YA": "sold_on_promo_chg_ya_pct",
     "Disp Only Units": "disp_only_units",
@@ -139,7 +150,6 @@ REQUIRED_MASTER_HEADERS = [
     "SIZE",
 ]
 
-
 def string_column(key: str, size: int = 512, required: bool = False) -> dict[str, Any]:
     return {"key": key, "type": "varchar", "size": size, "required": required}
 
@@ -176,6 +186,8 @@ SCORECARD_COLUMNS = [
 ]
 
 SCORECARD_INDEXES = [
+    {"key": "idx_market", "type": "key", "attributes": ["market"]},
+    {"key": "idx_product", "type": "key", "attributes": ["product"]},
     {"key": "idx_market_period", "type": "key", "attributes": ["market", "period"]},
     {"key": "idx_product_period", "type": "key", "attributes": ["product", "period"]},
     {"key": "idx_brand_period", "type": "key", "attributes": ["brand", "period"]},

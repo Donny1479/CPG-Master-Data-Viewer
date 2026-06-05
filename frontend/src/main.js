@@ -13,15 +13,18 @@ const DEFAULT_ROLLING_52_PERIOD = "Rolling 52 w/e";
 const BUSINESS_ALL = "all";
 const BUSINESS_COFFEE = "coffee";
 const BUSINESS_SOUP = "soup_chili";
+const BUSINESS_COFFEE_DASHBOARDS = "coffee_dashboard";
 
 const NAV_GROUPS = [
   { id: BUSINESS_COFFEE, label: "Coffee Insights" },
+  { id: BUSINESS_COFFEE_DASHBOARDS, label: "Coffee Dashboards" },
   { id: BUSINESS_SOUP, label: "Soup & Chili Insights" },
 ];
 
 const BUSINESS_LABELS = {
   [BUSINESS_COFFEE]: "Coffee",
   [BUSINESS_SOUP]: "Soup & Chili",
+  [BUSINESS_COFFEE_DASHBOARDS]: "Coffee Dashboards",
   [BUSINESS_ALL]: "All Insights",
 };
 
@@ -95,6 +98,45 @@ const VIEW_CONFIGS = [
     defaultPeriod: DEFAULT_ROLLING_52_PERIOD,
     defaultProduct: "Tim Hortons Instant Regular",
     controls: ["product", "period"],
+  },
+  {
+    id: "coffeeShareTrended",
+    label: "Share Trended",
+    source: "Coffee Dashboards",
+    kind: "coffeeDashboard",
+    dashboardView: "shareTrended",
+    business: BUSINESS_COFFEE_DASHBOARDS,
+    navGroup: BUSINESS_COFFEE_DASHBOARDS,
+    defaultMarket: DEFAULT_MARKET,
+    defaultBrandPack1: "Tim Hortons Single Serve",
+    defaultBrandPack2: "Private Label Single Serve",
+    controls: ["market", "brandPack1", "brandPack2"],
+  },
+  {
+    id: "coffeePriceCompare",
+    label: "Price Compare",
+    source: "Coffee Dashboards",
+    kind: "coffeeDashboard",
+    dashboardView: "priceCompare",
+    business: BUSINESS_COFFEE_DASHBOARDS,
+    navGroup: BUSINESS_COFFEE_DASHBOARDS,
+    defaultMarket: DEFAULT_MARKET,
+    defaultMetric: "Avg Units Price",
+    defaultMetricChange: "Avg Units Price % Chg YA",
+    defaultBrandPack1: "Tim Hortons Single Serve",
+    defaultBrandPack2: "Private Label Single Serve",
+    controls: ["market", "metric", "metricChange", "brandPack1", "brandPack2"],
+  },
+  {
+    id: "coffeeMarketView",
+    label: "Market View",
+    source: "Coffee Dashboards",
+    kind: "coffeeDashboard",
+    dashboardView: "marketView",
+    business: BUSINESS_COFFEE_DASHBOARDS,
+    navGroup: BUSINESS_COFFEE_DASHBOARDS,
+    defaultBrandPack: "Private Label Single Serve",
+    controls: ["period", "brandPack"],
   },
   {
     id: "soupOverview",
@@ -561,6 +603,11 @@ function defaultFilters(config) {
     period: config.defaultPeriod || "",
     soupPeriod: config.defaultSoupPeriod || config.defaultPeriod || "",
     product: config.defaultProduct || "Tim Hortons",
+    brandPack1: config.defaultBrandPack1 || "Tim Hortons Single Serve",
+    brandPack2: config.defaultBrandPack2 || "Private Label Single Serve",
+    brandPack: config.defaultBrandPack || "Private Label Single Serve",
+    metric: config.defaultMetric || "Avg Units Price",
+    metricChange: config.defaultMetricChange || "Avg Units Price % Chg YA",
     competitorMode: "aggregate",
   };
 }
@@ -810,6 +857,10 @@ function loginView() {
 function navItem(config) {
   const iconName = config.kind?.includes("customer")
     ? "customer"
+    : config.kind === "coffeeDashboard"
+      ? config.dashboardView === "priceCompare"
+        ? "price"
+        : "trend"
     : config.kind?.includes("Detail") || config.kind?.includes("detail")
       ? "detail"
       : config.kind === "overview"
@@ -866,6 +917,9 @@ function renderActiveView() {
   if (config.kind === "customerSummary") {
     return `${controls}${renderCustomerSummary()}`;
   }
+  if (config.kind === "coffeeDashboard") {
+    return `${controls}${renderCoffeeDashboard(config.dashboardView)}`;
+  }
   return `${controls}${renderCustomerDetail()}`;
 }
 
@@ -879,6 +933,11 @@ function renderToolbar(config, filters) {
       ${config.controls.includes("benchmarkMarket") ? selectControl("benchmarkMarket", "Benchmark", filters.markets, filters.benchmarkMarket) : ""}
       ${config.controls.includes("product") ? selectControl("product", "Manufacturer / Brand / Pack Group", filters.products, filters.product) : ""}
       ${config.controls.includes("period") ? selectControl("period", "Time Frame", filters.periods, filters.period) : ""}
+      ${config.controls.includes("brandPack1") ? selectControl("brandPack1", "Brand & Pack Group 1", filters.products, filters.brandPack1) : ""}
+      ${config.controls.includes("brandPack2") ? selectControl("brandPack2", "Brand & Pack Group 2", filters.products, filters.brandPack2) : ""}
+      ${config.controls.includes("brandPack") ? selectControl("brandPack", "Brand / Pack Group", filters.products, filters.brandPack) : ""}
+      ${config.controls.includes("metric") ? selectControl("metric", "Metric", filters.priceMetrics || [], filters.metric) : ""}
+      ${config.controls.includes("metricChange") ? selectControl("metricChange", "Metric Chg", filters.priceChangeMetrics || [], filters.metricChange) : ""}
     </section>
   `;
 }
@@ -1123,6 +1182,234 @@ function kpiTile(title, value, delta, iconName, caption) {
       </div>
     </article>
   `;
+}
+
+function renderCoffeeDashboard(dashboardView) {
+  const dashboards = state.data.views?.coffeeDashboards || {};
+  if (dashboardView === "shareTrended") {
+    return renderShareTrendedDashboard(dashboards.shareTrended);
+  }
+  if (dashboardView === "priceCompare") {
+    return renderPriceCompareDashboard(dashboards.priceCompare);
+  }
+  return renderMarketViewDashboard(dashboards.marketView);
+}
+
+function renderShareTrendedDashboard(view) {
+  if (!view) return emptyPanel("No share trend data for this selection.");
+  return `
+    <section class="dashboard-chart-grid">
+      ${trendChartCard(
+        "Trended $ Shr Comparison",
+        `${state.data.filters.market} | Share benchmarked to Packaged Coffee & Instant Coffee`,
+        view.share,
+        (value) => percent(value, 1),
+      )}
+      ${trendChartCard(
+        "Trended $ Shr Chg YA Comparison",
+        `${state.data.filters.market} | Latest 12 monthly periods`,
+        view.shareChange,
+        (value) => pointChange(value),
+      )}
+    </section>
+  `;
+}
+
+function renderPriceCompareDashboard(view) {
+  if (!view) return emptyPanel("No price comparison data for this selection.");
+  return `
+    <section class="dashboard-chart-grid">
+      ${trendChartCard(
+        `Trended ${view.metric} Comparison`,
+        state.data.filters.market,
+        view.price,
+        (value) => priceMetricFormatter(view.metric, value),
+      )}
+      ${trendChartCard(
+        `Trended ${view.metricChange} Comparison`,
+        `${state.data.filters.market} | Latest 12 monthly periods`,
+        view.priceChange,
+        (value) => percent(value, 1),
+      )}
+    </section>
+  `;
+}
+
+function renderMarketViewDashboard(view) {
+  if (!view) return emptyPanel("No market view data for this selection.");
+  return `
+    <section class="dashboard-chart-grid single">
+      ${trendChartCard(
+        `${view.brandPack} Discount vs Conventional - $ Mkt Imp - 2 Years Trended`,
+        "National Conventional GDM vs National Discount GDM",
+        view.impact,
+        (value) => percent(value, 0),
+      )}
+    </section>
+    <section class="dashboard-table-card">
+      <header>
+        <h2>Market View</h2>
+        <span>${escapeHtml(view.brandPack)} | ${escapeHtml(view.period)}</span>
+      </header>
+      ${marketViewTable(view.rows || [])}
+    </section>
+  `;
+}
+
+function priceMetricFormatter(metric, value) {
+  if (metric.includes("Price")) return currency(value, 2);
+  return valueNumber(value, 1);
+}
+
+function trendChartCard(title, subtitle, chartData, formatter) {
+  return `
+    <article class="dashboard-chart-card">
+      <header>
+        <h2>${escapeHtml(title)}</h2>
+        <span>${escapeHtml(subtitle)}</span>
+      </header>
+      ${lineChart(chartData, formatter)}
+    </article>
+  `;
+}
+
+function lineChart(chartData, formatter) {
+  const periods = chartData?.periods || [];
+  const series = chartData?.series || [];
+  const values = series.flatMap((item) => item.values || []).filter((value) => Number.isFinite(value));
+  if (!periods.length || !series.length || !values.length) {
+    return emptyPanel("No chart data for this selection.");
+  }
+
+  let min = Math.min(...values);
+  let max = Math.max(...values);
+  if (min === max) {
+    min -= 1;
+    max += 1;
+  }
+  const padding = (max - min) * 0.12;
+  min -= padding;
+  max += padding;
+
+  const width = 900;
+  const height = 360;
+  const left = 72;
+  const right = 24;
+  const top = 24;
+  const bottom = 66;
+  const plotWidth = width - left - right;
+  const plotHeight = height - top - bottom;
+  const colors = ["#b21b25", "#0f7a79", "#d69a2d", "#566d7c"];
+  const xFor = (index) => left + (periods.length === 1 ? plotWidth / 2 : (plotWidth * index) / (periods.length - 1));
+  const yFor = (value) => top + ((max - value) / (max - min)) * plotHeight;
+  const ticks = Array.from({ length: 5 }, (_, index) => min + ((max - min) * index) / 4);
+  const labelEvery = Math.max(1, Math.ceil(periods.length / 8));
+
+  return `
+    <div class="line-chart">
+      <svg viewBox="0 0 ${width} ${height}" role="img" aria-label="${escapeHtml(series.map((item) => item.label).join(" compared to "))}">
+        <g class="chart-grid">
+          ${ticks
+            .map((tick) => {
+              const y = yFor(tick);
+              return `
+                <line x1="${left}" y1="${y}" x2="${width - right}" y2="${y}"></line>
+                <text x="${left - 10}" y="${y + 4}" text-anchor="end">${escapeHtml(formatter(tick))}</text>
+              `;
+            })
+            .join("")}
+        </g>
+        <line class="chart-axis" x1="${left}" y1="${top}" x2="${left}" y2="${height - bottom}"></line>
+        <line class="chart-axis" x1="${left}" y1="${height - bottom}" x2="${width - right}" y2="${height - bottom}"></line>
+        <g class="chart-x-labels">
+          ${periods
+            .map((period, index) =>
+              index % labelEvery === 0 || index === periods.length - 1
+                ? `<text x="${xFor(index)}" y="${height - 34}" text-anchor="middle">${escapeHtml(period)}</text>`
+                : "",
+            )
+            .join("")}
+        </g>
+        ${series
+          .map((item, seriesIndex) => {
+            const color = colors[seriesIndex % colors.length];
+            const path = linePath(item.values || [], xFor, yFor);
+            const points = (item.values || [])
+              .map((value, index) =>
+                Number.isFinite(value)
+                  ? `<circle cx="${xFor(index)}" cy="${yFor(value)}" r="4"><title>${escapeHtml(`${item.label} | ${periods[index]} | ${formatter(value)}`)}</title></circle>`
+                  : "",
+              )
+              .join("");
+            return `<g class="chart-series" style="--series-color:${color}"><path d="${path}"></path>${points}</g>`;
+          })
+          .join("")}
+      </svg>
+      <div class="chart-legend">
+        ${series
+          .map(
+            (item, index) => `
+              <span><i style="background:${colors[index % colors.length]}"></i>${escapeHtml(item.label)}</span>
+            `,
+          )
+          .join("")}
+      </div>
+    </div>
+  `;
+}
+
+function linePath(values, xFor, yFor) {
+  let path = "";
+  let drawing = false;
+  values.forEach((value, index) => {
+    if (!Number.isFinite(value)) {
+      drawing = false;
+      return;
+    }
+    const command = drawing ? "L" : "M";
+    path += `${command}${xFor(index).toFixed(1)} ${yFor(value).toFixed(1)} `;
+    drawing = true;
+  });
+  return path.trim();
+}
+
+function marketViewTable(rows) {
+  if (!rows.length) return emptyPanel("No market rows for this time frame and brand/pack group.");
+  return `
+    <div class="dashboard-table-wrap">
+      <table class="dashboard-market-table">
+        <thead>
+          <tr>
+            <th>Market / Customer / Banner</th>
+            <th>$ Mkt Shr</th>
+            <th>Pt Chg</th>
+            <th>Development Index</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows
+            .map(
+              (row) => `
+                <tr>
+                  <th>${escapeHtml(row.market)}</th>
+                  <td>${percent(row.share, 0)}</td>
+                  <td class="${deltaClass(row.pointChange)}">${pointChange(row.pointChange)}</td>
+                  <td class="${indexClass(row.developmentIndex)}">${indexValue(row.developmentIndex)}</td>
+                </tr>
+              `,
+            )
+            .join("")}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+function indexClass(value) {
+  if (value == null) return "neutral";
+  if (value < 100) return "negative";
+  if (value > 100) return "positive";
+  return "neutral";
 }
 
 function dashboardScorecard(sections, overview) {
@@ -2010,6 +2297,11 @@ function bindInteractions() {
   bindFilter("period");
   bindFilter("soupPeriod");
   bindFilter("product");
+  bindFilter("brandPack1");
+  bindFilter("brandPack2");
+  bindFilter("brandPack");
+  bindFilter("metric");
+  bindFilter("metricChange");
 
   const competitorMode = document.querySelector("#competitorMode");
   competitorMode?.addEventListener("change", (event) => {
@@ -2115,6 +2407,11 @@ async function loadDashboard() {
   if (config.controls.includes("period") && filters.period) params.set("period", filters.period);
   if (config.kind === "executive" && filters.soupPeriod) params.set("soupPeriod", filters.soupPeriod);
   if (config.controls.includes("product") && filters.product) params.set("product", filters.product);
+  if (config.controls.includes("brandPack1") && filters.brandPack1) params.set("brandPack1", filters.brandPack1);
+  if (config.controls.includes("brandPack2") && filters.brandPack2) params.set("brandPack2", filters.brandPack2);
+  if (config.controls.includes("brandPack") && filters.brandPack) params.set("brandPack", filters.brandPack);
+  if (config.controls.includes("metric") && filters.metric) params.set("metric", filters.metric);
+  if (config.controls.includes("metricChange") && filters.metricChange) params.set("metricChange", filters.metricChange);
 
   try {
     const query = params.toString();
@@ -2142,6 +2439,11 @@ async function loadDashboard() {
       period: payload.filters.period,
       soupPeriod: payload.businesses?.soupChili?.filters?.period || filters.soupPeriod || payload.filters.period,
       product: payload.filters.product,
+      brandPack1: payload.filters.brandPack1 || filters.brandPack1,
+      brandPack2: payload.filters.brandPack2 || filters.brandPack2,
+      brandPack: payload.filters.brandPack || filters.brandPack,
+      metric: payload.filters.metric || filters.metric,
+      metricChange: payload.filters.metricChange || filters.metricChange,
     };
   } catch (error) {
     if (state.auth.user) {

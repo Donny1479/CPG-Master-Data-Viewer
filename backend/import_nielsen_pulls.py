@@ -9,6 +9,14 @@ from typing import Iterable, Iterator
 
 from .appwrite_client import AppwriteClient
 from .config import AppConfig
+from .coffee_dashboard_workbook import (
+    DASHBOARD_BUSINESS,
+    PRICE_CHANGE_METRICS,
+    PRICE_METRICS,
+    append_unique,
+    iter_dashboard_rows,
+    summarize_dashboard_workbook,
+)
 from .source_pulls import combined_import_run_id, iter_compiled_pull_rows, summarize_source_pulls
 from .workbook import file_sha256
 
@@ -47,9 +55,12 @@ def main() -> None:
     )
     parser.add_argument(
         "--business",
-        choices=("coffee", "soup_chili"),
+        choices=("coffee", "soup_chili", DASHBOARD_BUSINESS),
         default="coffee",
-        help="Select the pull structure to compile. Coffee expects 4 pulls; soup_chili expects Ready to Serve, Condensed, and Chili.",
+        help=(
+            "Select the pull structure to compile. Coffee expects 4 pulls; soup_chili expects "
+            "Ready to Serve, Condensed, and Chili; coffee_dashboard reads the four raw dashboard tabs."
+        ),
     )
     parser.add_argument("--dry-run", action="store_true", help="Parse the pulls without sending rows to Appwrite.")
     parser.add_argument("--limit", type=int, default=None, help="Limit imported rows for testing.")
@@ -59,7 +70,10 @@ def main() -> None:
     import_run_id = combined_import_run_id(paths, args.business)
 
     if args.dry_run:
-        summary = summarize_source_pulls(paths, business=args.business)
+        if args.business == DASHBOARD_BUSINESS:
+            summary = summarize_dashboard_workbook(paths, import_run_id, limit=args.limit)
+        else:
+            summary = summarize_source_pulls(paths, business=args.business)
         print(f"Dry run OK: {summary['total_rows']} compiled rows detected")
         print(f"Import run ID: {summary['import_run_id']}")
         for pull_type, source in summary["sources"].items():
@@ -86,20 +100,37 @@ def main() -> None:
         config.table_permissions,
     )
 
-    rows = iter_compiled_pull_rows(paths, import_run_id=import_run_id, limit=args.limit, business=args.business)
+    if args.business == DASHBOARD_BUSINESS:
+        rows = iter_dashboard_rows(paths, import_run_id=import_run_id, limit=args.limit)
+        markets: list[str] | set[str] = []
+        periods: list[str] | set[str] = []
+        products: list[str] | set[str] = []
+        market_seen: set[str] = set()
+        period_seen: set[str] = set()
+        product_seen: set[str] = set()
+    else:
+        rows = iter_compiled_pull_rows(paths, import_run_id=import_run_id, limit=args.limit, business=args.business)
+        markets = set()
+        periods = set()
+        products = set()
+        market_seen = set()
+        period_seen = set()
+        product_seen = set()
     imported = 0
-    markets: set[str] = set()
-    periods: set[str] = set()
-    products: set[str] = set()
     source_counts: dict[str, int] = {}
     for batch in chunks(rows, config.bulk_batch_size):
         for row in batch:
-            if row.get("market"):
-                markets.add(str(row["market"]))
-            if row.get("period"):
-                periods.add(str(row["period"]))
-            if row.get("product"):
-                products.add(str(row["product"]))
+            if args.business == DASHBOARD_BUSINESS:
+                append_unique(markets, market_seen, row.get("market"))  # type: ignore[arg-type]
+                append_unique(periods, period_seen, row.get("period"))  # type: ignore[arg-type]
+                append_unique(products, product_seen, row.get("product"))  # type: ignore[arg-type]
+            else:
+                if row.get("market"):
+                    markets.add(str(row["market"]))  # type: ignore[attr-defined]
+                if row.get("period"):
+                    periods.add(str(row["period"]))  # type: ignore[attr-defined]
+                if row.get("product"):
+                    products.add(str(row["product"]))  # type: ignore[attr-defined]
             pull_type = str(row.get("source_pull_type") or "unknown")
             source_counts[pull_type] = source_counts.get(pull_type, 0) + 1
 
@@ -108,17 +139,34 @@ def main() -> None:
         if imported % 1000 == 0:
             print(f"Imported {imported} rows")
 
+    if args.business == DASHBOARD_BUSINESS:
+        period_options = list(periods)  # type: ignore[arg-type]
+        metadata_source = "coffee_dashboard_raw_tabs"
+        options = {
+            "markets": list(markets),  # type: ignore[arg-type]
+            "periods": period_options,
+            "products": list(products),  # type: ignore[arg-type]
+            "nonMonthlyPeriods": [
+                period for period in period_options if not period.upper().startswith("P") or "W/E" in period.upper()
+            ],
+            "priceMetrics": PRICE_METRICS,
+            "priceChangeMetrics": PRICE_CHANGE_METRICS,
+        }
+    else:
+        metadata_source = "nielsen_raw_tabs"
+        options = {
+            "markets": sorted(markets),  # type: ignore[arg-type]
+            "periods": sorted(periods),  # type: ignore[arg-type]
+            "products": sorted(products),  # type: ignore[arg-type]
+        }
+
     metadata_json = json.dumps(
         {
-            "source": "nielsen_raw_tabs",
+            "source": metadata_source,
             "business": args.business,
             "rowCount": imported,
             "sourceCounts": source_counts,
-            "options": {
-                "markets": sorted(markets),
-                "periods": sorted(periods),
-                "products": sorted(products),
-            },
+            "options": options,
         },
         separators=(",", ":"),
     )

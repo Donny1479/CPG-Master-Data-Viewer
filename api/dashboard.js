@@ -12,6 +12,12 @@ const DEFAULT_CUSTOMER_PRODUCT = "Tim Hortons";
 const DEFAULT_SOUP_CUSTOMER_PRODUCT = "Tim Hortons Ready to Serve";
 const DEFAULT_BUSINESS = "coffee";
 const ALL_BUSINESSES = "all";
+const COFFEE_DASHBOARD_BUSINESS = "coffee_dashboard";
+const DEFAULT_DASHBOARD_BRAND_PACK_1 = "Tim Hortons Single Serve";
+const DEFAULT_DASHBOARD_BRAND_PACK_2 = "Private Label Single Serve";
+const DEFAULT_MARKET_VIEW_BRAND_PACK = "Private Label Single Serve";
+const DEFAULT_PRICE_METRIC = "Avg Units Price";
+const DEFAULT_PRICE_CHANGE_METRIC = "Avg Units Price % Chg YA";
 
 const OVERVIEW_SECTIONS = [
   {
@@ -147,6 +153,49 @@ const BUSINESS_CONFIGS = {
     overviewSections: SOUP_OVERVIEW_SECTIONS,
   },
 };
+
+const SUPPORTED_IMPORT_BUSINESSES = new Set([...Object.keys(BUSINESS_CONFIGS), COFFEE_DASHBOARD_BUSINESS]);
+
+const DASHBOARD_METRIC_FIELDS = {
+  "$": "dollar_sales",
+  "$ Shr - Product": "dollar_share_product",
+  "$ Shr Chg YA - Product": "dollar_share_chg_ya_product",
+  "Avg Units Price": "avg_units_price",
+  "Avg Units Price % Chg YA": "avg_units_price_pct_chg_ya",
+  "No Promo Units Price": "no_promo_units_price",
+  "No Promo Units Price % Chg YA": "no_promo_units_price_pct_chg_ya",
+  "Any Promo Units Price": "any_promo_units_price",
+  "Any Promo Units Price % Chg YA": "any_promo_units_price_pct_chg_ya",
+  "Avg Pounds Price": "avg_pounds_price",
+  "Avg Pounds Price % Chg YA": "avg_pounds_price_pct_chg_ya",
+  "Any Promo Pounds Price": "any_promo_pounds_price",
+  "Any Promo Pounds Price % Chg YA": "any_promo_pounds_price_pct_chg_ya",
+  "No Promo Pounds Price": "no_promo_pounds_price",
+  "No Promo Pounds Price % Chg YA": "no_promo_pounds_price_pct_chg_ya",
+  "$ Mkt Shr - Market": "dollar_market_share_market",
+  "$ Mkt Shr Chg YA - Market": "dollar_market_share_chg_ya_market",
+  "Dev Index": "dev_index",
+  "$ Shr of Distribution (TDP) on Display": "display_distribution_share",
+  "$ Shr of TDP - Any Display": "any_display_tdp_share",
+};
+
+const PRICE_METRICS = [
+  "Avg Units Price",
+  "No Promo Units Price",
+  "Any Promo Units Price",
+  "Avg Pounds Price",
+  "Any Promo Pounds Price",
+  "No Promo Pounds Price",
+];
+
+const PRICE_CHANGE_METRICS = [
+  "Avg Units Price % Chg YA",
+  "No Promo Units Price % Chg YA",
+  "Any Promo Units Price % Chg YA",
+  "Avg Pounds Price % Chg YA",
+  "Any Promo Pounds Price % Chg YA",
+  "No Promo Pounds Price % Chg YA",
+];
 
 const CUSTOMER_MARKET_ORDER = [
   "NATIONAL EX NFLD GDM",
@@ -410,6 +459,7 @@ function compactRow(row) {
     brand: row.brand,
     thBrand: row.th_brand,
     sourcePullType: row.source_pull_type,
+    dollarSales: numberValue(row.dollar_sales),
     dollarSales000: numberValue(row.dollar_sales_000),
     dollarSalesChangeYa000: numberValue(row.dollar_sales_chg_ya_000),
     dollarPctChangeYa: numberValue(row.dollar_pct_chg_ya),
@@ -423,6 +473,10 @@ function compactRow(row) {
     poundsPctChangeYa: numberValue(row.pounds_pct_chg_ya),
     avgPoundsPrice: numberValue(row.avg_pounds_price),
     avgPoundsPricePctChangeYa: numberValue(row.avg_pounds_price_pct_chg_ya),
+    anyPromoPoundsPrice: numberValue(row.any_promo_pounds_price),
+    anyPromoPoundsPricePctChangeYa: numberValue(row.any_promo_pounds_price_pct_chg_ya),
+    noPromoPoundsPrice: numberValue(row.no_promo_pounds_price),
+    noPromoPoundsPricePctChangeYa: numberValue(row.no_promo_pounds_price_pct_chg_ya),
     avgUnitsPrice: numberValue(row.avg_units_price),
     avgUnitsPriceChangeYa: numberValue(row.avg_units_price_chg_ya),
     avgUnitsPricePctChangeYa: numberValue(row.avg_units_price_pct_chg_ya),
@@ -446,6 +500,11 @@ function compactRow(row) {
     itemsPerStoreChangeYa: numberValue(row.items_per_store_chg_ya),
     dollarSppdp: numberValue(row.dollar_sppdp),
     dollarSppdpPctChangeYa: numberValue(row.dollar_sppdp_pct_chg_ya),
+    dollarMarketShareMarket: numberValue(row.dollar_market_share_market),
+    dollarMarketShareChangeYaMarket: numberValue(row.dollar_market_share_chg_ya_market),
+    devIndex: numberValue(row.dev_index),
+    displayDistributionShare: numberValue(row.display_distribution_share),
+    anyDisplayTdpShare: numberValue(row.any_display_tdp_share),
   };
 }
 
@@ -642,7 +701,7 @@ function parseImportMetadata(importRun) {
 }
 
 function inferBusinessFromMetadata(metadata) {
-  if (metadata?.business && BUSINESS_CONFIGS[metadata.business]) return metadata.business;
+  if (metadata?.business && SUPPORTED_IMPORT_BUSINESSES.has(metadata.business)) return metadata.business;
   const sourceCounts = metadata?.sourceCounts || {};
   if ("ready_to_serve" in sourceCounts || "condensed" in sourceCounts || "chili" in sourceCounts) {
     return "soup_chili";
@@ -695,6 +754,120 @@ function resolveFilters(options, selectedMarket, selectedBenchmarkMarket, select
   const period = selectedPeriod && periods.includes(selectedPeriod) ? selectedPeriod : pickDefaultPeriod(periods);
   const product = selectedProduct && products.includes(selectedProduct) ? selectedProduct : pickDefaultProduct(products, business);
   return { market, benchmarkMarket, period, product };
+}
+
+function dashboardPeriodRank(period) {
+  const match = String(period || "").match(/^P(\d{1,2})\s+(\d{4})$/i);
+  if (match) {
+    return Number(match[2]) * 20 + Number(match[1]);
+  }
+  if (String(period || "").includes("Rolling 13")) return 99901;
+  if (String(period || "").includes("Rolling 26")) return 99902;
+  if (String(period || "").includes("Rolling 52")) return 99903;
+  if (String(period || "").includes("YTD")) return 99904;
+  return 99999;
+}
+
+function sortDashboardPeriods(periods) {
+  return [...periods].sort((a, b) => {
+    const score = dashboardPeriodRank(a) - dashboardPeriodRank(b);
+    return score || String(a).localeCompare(String(b));
+  });
+}
+
+function dashboardMetricKey(label) {
+  return DASHBOARD_METRIC_FIELDS[label] || DASHBOARD_METRIC_FIELDS[DEFAULT_PRICE_METRIC];
+}
+
+function pickOption(options, requested, fallback) {
+  return requested && options.includes(requested)
+    ? requested
+    : options.find((option) => option === fallback) || options[0] || "";
+}
+
+function pickMarketViewPeriod(periods, requested) {
+  if (requested && periods.includes(requested)) return requested;
+  return (
+    periods.find((period) => String(period).startsWith("YTD:")) ||
+    periods.find((period) => String(period).includes("Rolling 52")) ||
+    periods[0] ||
+    ""
+  );
+}
+
+function dashboardRowLookup(rows) {
+  const map = new Map();
+  rows.forEach((row) => {
+    map.set(`${row.market}|${row.period}|${row.product}`, row);
+  });
+  return map;
+}
+
+function findDashboardRow(lookup, market, period, product) {
+  return lookup.get(`${market}|${period}|${product}`) || null;
+}
+
+function dashboardSeries(lookup, periods, market, products, metricLabel) {
+  const key = dashboardMetricKey(metricLabel);
+  return periods.map((period) => ({
+    period,
+    values: products.map((product) => numberValue(findDashboardRow(lookup, market, period, product)?.[key])),
+  }));
+}
+
+function makeSeriesPayload(periods, products, labels, points) {
+  return {
+    periods,
+    series: products.map((product, index) => ({
+      label: labels[index] || product,
+      product,
+      values: points.map((point) => point.values[index]),
+    })),
+  };
+}
+
+function marketViewRows(rows, period, product) {
+  const lookup = dashboardRowLookup(rows);
+  return CUSTOMER_MARKET_ORDER.map((market) => {
+    const row = findDashboardRow(lookup, market, period, product);
+    if (!row) return null;
+    return {
+      market,
+      share: numberValue(row.dollar_market_share_market),
+      pointChange: numberValue(row.dollar_market_share_chg_ya_market),
+      developmentIndex: numberValue(row.dev_index),
+    };
+  }).filter(Boolean);
+}
+
+function compactDashboardImport(context, metadata, business = COFFEE_DASHBOARD_BUSINESS) {
+  const run = context?.run || null;
+  if (!run) return null;
+  return {
+    id: run.$id,
+    status: run.status,
+    fileName: run.file_name,
+    rowCount: run.row_count,
+    completedAt: run.completed_at,
+    source: metadata?.source || null,
+    business,
+    sourceCounts: metadata?.sourceCounts || null,
+  };
+}
+
+function metadataDashboardOptions(metadata) {
+  const options = metadata?.options || {};
+  return {
+    markets: Array.isArray(options.markets) ? options.markets.filter(Boolean) : [],
+    periods: Array.isArray(options.periods) ? options.periods.filter(Boolean) : [],
+    products: Array.isArray(options.products) ? options.products.filter(Boolean) : [],
+    nonMonthlyPeriods: Array.isArray(options.nonMonthlyPeriods) ? options.nonMonthlyPeriods.filter(Boolean) : [],
+    priceMetrics: Array.isArray(options.priceMetrics) && options.priceMetrics.length ? options.priceMetrics : PRICE_METRICS,
+    priceChangeMetrics:
+      Array.isArray(options.priceChangeMetrics) && options.priceChangeMetrics.length
+        ? options.priceChangeMetrics
+        : PRICE_CHANGE_METRICS,
+  };
 }
 
 function dedupeRows(rowGroups) {
@@ -915,6 +1088,138 @@ async function buildBusinessDashboardPayload(cfg, context, request, business, ov
   );
 }
 
+async function buildCoffeeDashboardPayload(cfg, context, request) {
+  const metadata = context?.metadata || null;
+  const options = metadataDashboardOptions(metadata);
+  const markets = options.markets;
+  const periods = sortDashboardPeriods(options.periods);
+  const monthlyPeriods = periods.filter((period) => /^P\d{1,2}\s+\d{4}$/i.test(period)).slice(-25);
+  const changePeriods = monthlyPeriods.slice(-12);
+  const nonMonthlyPeriods = options.nonMonthlyPeriods.length ? options.nonMonthlyPeriods : periods.filter((period) => !monthlyPeriods.includes(period));
+
+  const selectedMarket = pickOption(markets, queryValue(request.query.market), DEFAULT_TARGET_MARKET);
+  const selectedBrandPack1 = pickOption(options.products, queryValue(request.query.brandPack1), DEFAULT_DASHBOARD_BRAND_PACK_1);
+  const selectedBrandPack2 = pickOption(options.products, queryValue(request.query.brandPack2), DEFAULT_DASHBOARD_BRAND_PACK_2);
+  const selectedMarketBrandPack = pickOption(options.products, queryValue(request.query.brandPack), DEFAULT_MARKET_VIEW_BRAND_PACK);
+  const selectedMetric = pickOption(options.priceMetrics, queryValue(request.query.metric), DEFAULT_PRICE_METRIC);
+  const selectedMetricChange = pickOption(options.priceChangeMetrics, queryValue(request.query.metricChange), DEFAULT_PRICE_CHANGE_METRIC);
+  const selectedPeriod = pickMarketViewPeriod(nonMonthlyPeriods, queryValue(request.query.period));
+
+  const importRunId = context?.run?.$id || "";
+  if (!context || !importRunId) {
+    return {
+      updatedAt: new Date().toISOString(),
+      latestImport: null,
+      business: COFFEE_DASHBOARD_BUSINESS,
+      businessLabel: "Coffee Dashboards",
+      filters: {
+        market: selectedMarket,
+        period: selectedPeriod,
+        brandPack1: selectedBrandPack1,
+        brandPack2: selectedBrandPack2,
+        brandPack: selectedMarketBrandPack,
+        metric: selectedMetric,
+        metricChange: selectedMetricChange,
+        markets,
+        periods: nonMonthlyPeriods,
+        allPeriods: periods,
+        products: options.products,
+        priceMetrics: options.priceMetrics,
+        priceChangeMetrics: options.priceChangeMetrics,
+      },
+      counts: { loadedRows: 0, apiRowsLoaded: 0, importRuns: 0 },
+      views: { coffeeDashboards: {} },
+    };
+  }
+
+  const [marketRows, marketViewProductRows] = await Promise.all([
+    fetchScorecardRows(cfg, importRunId, { market: selectedMarket }, 12000),
+    fetchScorecardRows(cfg, importRunId, { product: selectedMarketBrandPack }, 2500),
+  ]);
+  const rows = dedupeRows([marketRows, marketViewProductRows]);
+  const lookup = dashboardRowLookup(rows);
+
+  const selectedProducts = [selectedBrandPack1, selectedBrandPack2];
+  const selectedProductLabels = [selectedBrandPack1, selectedBrandPack2];
+  const sharePoints = dashboardSeries(lookup, monthlyPeriods, selectedMarket, selectedProducts, "$ Shr - Product");
+  const shareChangePoints = dashboardSeries(lookup, changePeriods, selectedMarket, selectedProducts, "$ Shr Chg YA - Product");
+  const pricePoints = dashboardSeries(lookup, monthlyPeriods, selectedMarket, selectedProducts, selectedMetric);
+  const priceChangePoints = dashboardSeries(lookup, changePeriods, selectedMarket, selectedProducts, selectedMetricChange);
+
+  const marketViewLookup = dashboardRowLookup(marketViewProductRows);
+  const conventionalValues = monthlyPeriods.map((period) =>
+    numberValue(findDashboardRow(marketViewLookup, DEFAULT_ALTERNATE_BENCHMARK_MARKET, period, selectedMarketBrandPack)?.dollar_market_share_market),
+  );
+  const discountValues = monthlyPeriods.map((period) =>
+    numberValue(findDashboardRow(marketViewLookup, "NATIONAL DISCOUNT GDM", period, selectedMarketBrandPack)?.dollar_market_share_market),
+  );
+
+  const latestMetadata = metadata || parseImportMetadata(context.run);
+  return {
+    updatedAt: new Date().toISOString(),
+    latestImport: compactDashboardImport(context, latestMetadata),
+    business: COFFEE_DASHBOARD_BUSINESS,
+    businessLabel: "Coffee Dashboards",
+    filters: {
+      market: selectedMarket,
+      period: selectedPeriod,
+      brandPack1: selectedBrandPack1,
+      brandPack2: selectedBrandPack2,
+      brandPack: selectedMarketBrandPack,
+      metric: selectedMetric,
+      metricChange: selectedMetricChange,
+      markets,
+      periods: nonMonthlyPeriods,
+      allPeriods: periods,
+      products: options.products,
+      priceMetrics: options.priceMetrics,
+      priceChangeMetrics: options.priceChangeMetrics,
+    },
+    counts: {
+      loadedRows: metadata?.rowCount || context.run.row_count,
+      apiRowsLoaded: rows.length,
+      importRuns: 1,
+    },
+    views: {
+      coffeeDashboards: {
+        shareTrended: {
+          market: selectedMarket,
+          title: `${selectedMarket} - Share Benchmarked`,
+          share: makeSeriesPayload(monthlyPeriods, selectedProducts, selectedProductLabels, sharePoints),
+          shareChange: makeSeriesPayload(changePeriods, selectedProducts, selectedProductLabels, shareChangePoints),
+        },
+        priceCompare: {
+          market: selectedMarket,
+          metric: selectedMetric,
+          metricChange: selectedMetricChange,
+          price: makeSeriesPayload(monthlyPeriods, selectedProducts, selectedProductLabels, pricePoints),
+          priceChange: makeSeriesPayload(changePeriods, selectedProducts, selectedProductLabels, priceChangePoints),
+        },
+        marketView: {
+          period: selectedPeriod,
+          brandPack: selectedMarketBrandPack,
+          impact: {
+            periods: monthlyPeriods,
+            series: [
+              {
+                label: "Conventional - $ Market Imp",
+                market: DEFAULT_ALTERNATE_BENCHMARK_MARKET,
+                values: conventionalValues,
+              },
+              {
+                label: "Discount - $ Market Imp",
+                market: "NATIONAL DISCOUNT GDM",
+                values: discountValues,
+              },
+            ],
+          },
+          rows: marketViewRows(marketViewProductRows, selectedPeriod, selectedMarketBrandPack),
+        },
+      },
+    },
+  };
+}
+
 export default async function handler(request, response) {
   if (request.method !== "GET") {
     response.status(405).json({ error: "Method not allowed" });
@@ -936,6 +1241,15 @@ export default async function handler(request, response) {
     const contexts = await importRunContexts(cfg, importRuns);
     const requestedImportRunId = queryValue(request.query.importRunId);
     const requestedBusiness = queryValue(request.query.business) || DEFAULT_BUSINESS;
+
+    if (requestedBusiness === COFFEE_DASHBOARD_BUSINESS) {
+      const selectedContext = selectImportContext(contexts, COFFEE_DASHBOARD_BUSINESS, requestedImportRunId);
+      const payload = await buildCoffeeDashboardPayload(cfg, selectedContext, request);
+
+      response.setHeader("Cache-Control", "s-maxage=300, stale-while-revalidate=900");
+      response.status(200).json(payload);
+      return;
+    }
 
     if (requestedBusiness === ALL_BUSINESSES) {
       const coffeeContext = selectImportContext(contexts, "coffee");

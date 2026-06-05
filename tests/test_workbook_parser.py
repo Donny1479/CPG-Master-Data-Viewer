@@ -4,12 +4,14 @@ import os
 import unittest
 from pathlib import Path
 
-from backend.source_pulls import iter_compiled_pull_rows, summarize_source_pulls
+from backend.coffee_dashboard_workbook import iter_dashboard_rows, summarize_dashboard_workbook
+from backend.source_pulls import combined_import_run_id, iter_compiled_pull_rows, summarize_source_pulls
 from backend.workbook import iter_master_rows, master_headers, summarize_workbook
 
 
 DEFAULT_WORKBOOK = Path(r"C:\Users\rbide014\Downloads\July_Coffee Category and Customer Scorecard .xlsx")
 DEFAULT_SOUP_WORKBOOK = Path(r"C:\Users\rbide014\Downloads\Soup and Chili Scorecard 2026-06-05.xlsx")
+DEFAULT_COFFEE_DASHBOARD_WORKBOOK = Path(r"C:\Users\rbide014\Downloads\July_Dashboard_Coffee Category.xlsm")
 
 
 class WorkbookParserTest(unittest.TestCase):
@@ -75,6 +77,31 @@ class WorkbookParserTest(unittest.TestCase):
         self.assertAlmostEqual(first["dollar_sales_000"], 16177.8364)
         self.assertAlmostEqual(first["units_000"], 5538.6334)
         self.assertAlmostEqual(first["pounds_000"], 3161.5769)
+
+    def test_coffee_dashboard_compiler_reads_raw_tabs_not_master_table(self) -> None:
+        workbook = Path(os.environ.get("COFFEE_DASHBOARD_WORKBOOK_PATH", DEFAULT_COFFEE_DASHBOARD_WORKBOOK))
+        if not workbook.exists():
+            self.skipTest(f"Coffee dashboard workbook not found: {workbook}")
+
+        import_run_id = combined_import_run_id([workbook], "coffee_dashboard")
+        summary = summarize_dashboard_workbook([workbook], import_run_id)
+        self.assertEqual(summary["total_rows"], 218552)
+        self.assertEqual(summary["sourceCounts"]["topline_brands"], 19938)
+        self.assertEqual(summary["sourceCounts"]["single_serve"], 90957)
+        self.assertEqual(summary["sourceCounts"]["instant"], 25383)
+        self.assertEqual(summary["sourceCounts"]["rg"], 82274)
+
+        sample = next(
+            row
+            for row in iter_dashboard_rows([workbook], import_run_id)
+            if row["market"] == "NATIONAL EX NFLD GDM"
+            and row["period"] == "P7 2023"
+            and row["product"] == "Tim Hortons Single Serve"
+        )
+        self.assertAlmostEqual(sample["dollar_share_product"], 8.579)
+        self.assertAlmostEqual(sample["dollar_share_chg_ya_product"], -0.2671)
+        self.assertAlmostEqual(sample["avg_units_price"], 18.4396)
+        self.assertAlmostEqual(sample["dollar_market_share_market"], 100.0)
 
 
 if __name__ == "__main__":
