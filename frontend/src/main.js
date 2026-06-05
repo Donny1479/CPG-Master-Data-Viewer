@@ -10,12 +10,28 @@ const account = new Account(appwriteClient);
 const DEFAULT_MARKET = "NATIONAL EX NFLD GDM";
 const DEFAULT_BENCHMARK_TARGET_MARKET = "NATIONAL CONVENTIONAL GDM";
 const DEFAULT_ROLLING_52_PERIOD = "Rolling 52 w/e";
+const BUSINESS_ALL = "all";
+const BUSINESS_COFFEE = "coffee";
+const BUSINESS_SOUP = "soup_chili";
+
+const NAV_GROUPS = [
+  { id: BUSINESS_COFFEE, label: "Coffee Insights" },
+  { id: BUSINESS_SOUP, label: "Soup & Chili Insights" },
+];
+
+const BUSINESS_LABELS = {
+  [BUSINESS_COFFEE]: "Coffee",
+  [BUSINESS_SOUP]: "Soup & Chili",
+  [BUSINESS_ALL]: "All Insights",
+};
 
 const VIEW_CONFIGS = [
   {
     id: "executiveSummary",
     label: "Executive Summary",
     source: "Tim Hortons Focus",
+    kind: "executive",
+    business: BUSINESS_ALL,
     defaultPeriod: DEFAULT_ROLLING_52_PERIOD,
     defaultMarket: DEFAULT_MARKET,
     controls: ["market", "period"],
@@ -23,7 +39,10 @@ const VIEW_CONFIGS = [
   {
     id: "overview",
     label: "Benchmark Analysis",
-    source: "Benchmark Analysis",
+    source: "Coffee Insights",
+    kind: "overview",
+    business: BUSINESS_COFFEE,
+    navGroup: BUSINESS_COFFEE,
     defaultPeriod: DEFAULT_ROLLING_52_PERIOD,
     defaultMarket: DEFAULT_BENCHMARK_TARGET_MARKET,
     defaultBenchmarkMarket: DEFAULT_MARKET,
@@ -32,7 +51,10 @@ const VIEW_CONFIGS = [
   {
     id: "categorySummary",
     label: "Category Summary",
-    source: "Summary Coffee Category",
+    source: "Coffee Insights",
+    kind: "categorySummary",
+    business: BUSINESS_COFFEE,
+    navGroup: BUSINESS_COFFEE,
     defaultPeriod: DEFAULT_ROLLING_52_PERIOD,
     defaultMarket: DEFAULT_MARKET,
     controls: ["market", "period"],
@@ -40,7 +62,10 @@ const VIEW_CONFIGS = [
   {
     id: "categoryDetail",
     label: "Category Detail",
-    source: "Coffee Category",
+    source: "Coffee Insights",
+    kind: "categoryDetail",
+    business: BUSINESS_COFFEE,
+    navGroup: BUSINESS_COFFEE,
     defaultPeriod: DEFAULT_ROLLING_52_PERIOD,
     defaultMarket: DEFAULT_MARKET,
     controls: ["market", "period"],
@@ -48,7 +73,10 @@ const VIEW_CONFIGS = [
   {
     id: "customerSummary",
     label: "Customer Summary",
-    source: "Summary Coffee Customer",
+    source: "Coffee Insights",
+    kind: "customerSummary",
+    business: BUSINESS_COFFEE,
+    navGroup: BUSINESS_COFFEE,
     defaultPeriod: DEFAULT_ROLLING_52_PERIOD,
     defaultProduct: "Tim Hortons",
     controls: ["product", "period"],
@@ -56,9 +84,68 @@ const VIEW_CONFIGS = [
   {
     id: "customerDetail",
     label: "Customer Detail",
-    source: "Coffee Customer",
+    source: "Coffee Insights",
+    kind: "customerDetail",
+    business: BUSINESS_COFFEE,
+    navGroup: BUSINESS_COFFEE,
     defaultPeriod: DEFAULT_ROLLING_52_PERIOD,
     defaultProduct: "Tim Hortons Instant Regular",
+    controls: ["product", "period"],
+  },
+  {
+    id: "soupOverview",
+    label: "Benchmark Analysis",
+    source: "Soup & Chili Insights",
+    kind: "overview",
+    business: BUSINESS_SOUP,
+    navGroup: BUSINESS_SOUP,
+    defaultPeriod: DEFAULT_ROLLING_52_PERIOD,
+    defaultMarket: DEFAULT_BENCHMARK_TARGET_MARKET,
+    defaultBenchmarkMarket: DEFAULT_MARKET,
+    controls: ["market", "benchmarkMarket", "period"],
+  },
+  {
+    id: "soupCategorySummary",
+    label: "Category Summary",
+    source: "Soup & Chili Insights",
+    kind: "categorySummary",
+    business: BUSINESS_SOUP,
+    navGroup: BUSINESS_SOUP,
+    defaultPeriod: DEFAULT_ROLLING_52_PERIOD,
+    defaultMarket: DEFAULT_MARKET,
+    controls: ["market", "period"],
+  },
+  {
+    id: "soupCategoryDetail",
+    label: "Category Detail",
+    source: "Soup & Chili Insights",
+    kind: "categoryDetail",
+    business: BUSINESS_SOUP,
+    navGroup: BUSINESS_SOUP,
+    defaultPeriod: DEFAULT_ROLLING_52_PERIOD,
+    defaultMarket: DEFAULT_MARKET,
+    controls: ["market", "period"],
+  },
+  {
+    id: "soupCustomerSummary",
+    label: "Customer Summary",
+    source: "Soup & Chili Insights",
+    kind: "customerSummary",
+    business: BUSINESS_SOUP,
+    navGroup: BUSINESS_SOUP,
+    defaultPeriod: DEFAULT_ROLLING_52_PERIOD,
+    defaultProduct: "Tim Hortons Ready to Serve",
+    controls: ["product", "period"],
+  },
+  {
+    id: "soupCustomerDetail",
+    label: "Customer Detail",
+    source: "Soup & Chili Insights",
+    kind: "customerDetail",
+    business: BUSINESS_SOUP,
+    navGroup: BUSINESS_SOUP,
+    defaultPeriod: DEFAULT_ROLLING_52_PERIOD,
+    defaultProduct: "Tim Hortons Ready to Serve",
     controls: ["product", "period"],
   },
 ];
@@ -125,6 +212,55 @@ const CATEGORY_OTHER_BRAND_ORDER = [
   "Timothys",
   "AO Brand",
   "Kopiko",
+];
+
+const SOUP_CATEGORY_DEFINITIONS = [
+  {
+    key: "readyToServe",
+    label: "Ready to Serve",
+    product: "Ready to Serve Non Broth",
+    sourcePullType: "ready_to_serve",
+    children: [
+      { label: "Tim Hortons", product: "Tim Hortons Ready to Serve" },
+      { label: "Private Label", product: "Private Label Ready to Serve" },
+      {
+        label: "Campbells",
+        product: "Campbells Ready to Serve",
+        children: [
+          { label: "Red and White", product: "Campbells Red and White Ready to Serve" },
+          { label: "Chunky", product: "Campbells Chunky Ready to Serve" },
+        ],
+      },
+      { label: "Habitant", product: "Habitant Ready to Serve" },
+      { label: "St. Hubert", product: "St. Hubert Ready to Serve" },
+      { label: "Competitive Brands", product: "Competitive Brands Ready to Serve" },
+    ],
+  },
+  {
+    key: "condensed",
+    label: "Condensed",
+    product: "Condensed Non Broth",
+    sourcePullType: "condensed",
+    children: [
+      { label: "Tim Hortons", product: "Tim Hortons Condensed" },
+      { label: "Private Label", product: "Private Label Condensed" },
+      { label: "Campbells", product: "Campbells Condensed" },
+      { label: "Aylmer", product: "Aylmer Condensed" },
+      { label: "Competitive Brands", product: "Competitive Brands Condensed" },
+    ],
+  },
+  {
+    key: "chili",
+    label: "Chili",
+    product: "Chili",
+    sourcePullType: "chili",
+    children: [
+      { label: "Tim Hortons", product: "Tim Hortons Chili" },
+      { label: "Campbells Chunky", product: "Campbells Chunky Chili" },
+      { label: "Stagg", product: "Stagg Chili" },
+      { label: "Competitive Brands", product: "Competitive Brands Chili" },
+    ],
+  },
 ];
 
 const CATEGORY_METRIC_GROUPS = [
@@ -403,6 +539,7 @@ const state = {
   categoryExpanded: new Set(),
   customerSummaryExpanded: new Set(),
   customerDetailExpanded: new Set(),
+  navGroupsExpanded: new Set([BUSINESS_COFFEE, BUSINESS_SOUP]),
   viewFilters: {},
 };
 
@@ -420,6 +557,22 @@ function defaultFilters(config) {
     product: config.defaultProduct || "Tim Hortons",
     competitorMode: "aggregate",
   };
+}
+
+function activeBusiness() {
+  return viewConfig().business || BUSINESS_COFFEE;
+}
+
+function businessLabel(business = activeBusiness()) {
+  return BUSINESS_LABELS[business] || BUSINESS_LABELS[BUSINESS_COFFEE];
+}
+
+function businessData(business = activeBusiness()) {
+  if (state.data?.businesses) {
+    if (business === BUSINESS_SOUP) return state.data.businesses.soupChili;
+    if (business === BUSINESS_COFFEE) return state.data.businesses.coffee;
+  }
+  return state.data;
 }
 
 function metricColumnsWithGrouping(groups) {
@@ -522,6 +675,7 @@ function resetSessionViewState() {
   state.categoryExpanded = new Set();
   state.customerSummaryExpanded = new Set();
   state.customerDetailExpanded = new Set();
+  state.navGroupsExpanded = new Set([BUSINESS_COFFEE, BUSINESS_SOUP]);
   state.viewFilters = {};
 }
 
@@ -589,7 +743,7 @@ function appShell(config, content) {
           <span>Tim Hortons CPG</span>
         </div>
         <nav class="nav-list" aria-label="Dashboard views">
-          ${VIEW_CONFIGS.map(navItem).join("")}
+          ${navTree()}
         </nav>
         <div class="sidebar-meta">
           <span>${state.data?.counts?.loadedRows?.toLocaleString() || "0"} rows</span>
@@ -648,11 +802,11 @@ function loginView() {
 }
 
 function navItem(config) {
-  const iconName = config.id.includes("customer")
+  const iconName = config.kind?.includes("customer")
     ? "customer"
-    : config.id.includes("Detail") || config.id.includes("detail")
+    : config.kind?.includes("Detail") || config.kind?.includes("detail")
       ? "detail"
-      : config.id === "overview"
+      : config.kind === "overview"
         ? "overview"
         : "summary";
   return `
@@ -663,24 +817,47 @@ function navItem(config) {
   `;
 }
 
+function navTree() {
+  const standalone = VIEW_CONFIGS.filter((config) => !config.navGroup).map(navItem).join("");
+  const grouped = NAV_GROUPS.map(navGroup).join("");
+  return `${standalone}${grouped}`;
+}
+
+function navGroup(group) {
+  const items = VIEW_CONFIGS.filter((config) => config.navGroup === group.id);
+  const expanded = state.navGroupsExpanded.has(group.id);
+  const active = items.some((item) => item.id === state.activeView);
+  return `
+    <section class="nav-group ${expanded ? "expanded" : ""} ${active ? "active" : ""}">
+      <button class="nav-group-toggle" type="button" data-nav-group="${escapeHtml(group.id)}" aria-expanded="${expanded ? "true" : "false"}">
+        <span>${escapeHtml(group.label)}</span>
+        <span class="nav-chevron" aria-hidden="true"></span>
+      </button>
+      <div class="nav-group-items">
+        ${expanded ? items.map(navItem).join("") : ""}
+      </div>
+    </section>
+  `;
+}
+
 function renderActiveView() {
   const config = viewConfig();
   const filters = state.data.filters;
   const controls = renderToolbar(config, filters);
 
-  if (config.id === "executiveSummary") {
+  if (config.kind === "executive") {
     return `${controls}${renderExecutiveSummary()}`;
   }
-  if (config.id === "overview") {
+  if (config.kind === "overview") {
     return `${controls}${renderOverview()}`;
   }
-  if (config.id === "categorySummary") {
+  if (config.kind === "categorySummary") {
     return `${controls}${renderCategorySummary()}`;
   }
-  if (config.id === "categoryDetail") {
+  if (config.kind === "categoryDetail") {
     return `${controls}${renderCategoryDetail()}`;
   }
-  if (config.id === "customerSummary") {
+  if (config.kind === "customerSummary") {
     return `${controls}${renderCustomerSummary()}`;
   }
   return `${controls}${renderCustomerDetail()}`;
@@ -709,37 +886,124 @@ function selectControl(id, label, options, value) {
 }
 
 function renderExecutiveSummary() {
-  const tree = executiveSummaryTree();
-  const rows = flattenExecutiveTree(tree);
+  const coffee = businessData(BUSINESS_COFFEE);
+  const soup = businessData(BUSINESS_SOUP);
+  const coffeeRows = flattenExecutiveTree(executiveSummaryTree(BUSINESS_COFFEE, coffee));
+  const soupRows = flattenExecutiveTree(executiveSummaryTree(BUSINESS_SOUP, soup));
   return `
     <section class="view-strip">
-      ${metricPill("Market", state.data.filters.market)}
-      ${metricPill("Time Frame", state.data.filters.period)}
+      ${metricPill("Market", coffee?.filters?.market || state.data.filters.market)}
+      ${metricPill("Coffee Time Frame", coffee?.filters?.period || "")}
+      ${metricPill("Soup & Chili Time Frame", soup?.filters?.period || "")}
     </section>
     <section class="workbook-card executive-summary-card">
       <header>
-        <h2>Tim Hortons Executive Summary</h2>
-        <span>${escapeHtml(state.data.filters.market)} | ${escapeHtml(state.data.filters.period)}</span>
+        <h2>Coffee Executive Summary</h2>
+        <span>${escapeHtml(coffee?.filters?.market || "")} | ${escapeHtml(coffee?.filters?.period || "")}</span>
       </header>
-      ${executiveSummaryTable(rows)}
+      ${executiveSummaryTable(coffeeRows)}
+    </section>
+    <section class="workbook-card executive-summary-card executive-secondary-card">
+      <header>
+        <h2>Soup & Chili Executive Summary</h2>
+        <span>${escapeHtml(soup?.filters?.market || "")} | ${escapeHtml(soup?.filters?.period || "")}</span>
+      </header>
+      ${executiveSummaryTable(soupRows)}
     </section>
   `;
 }
 
-function executiveSummaryTree() {
-  const rows = state.data.views.category.rows;
+function executiveSummaryTree(business = BUSINESS_COFFEE, data = state.data) {
+  if (business === BUSINESS_SOUP) {
+    return soupExecutiveTree(data);
+  }
+  const rows = data?.views?.category?.rows || [];
   const lookup = categoryLookup(rows);
   return [
     categoryNode({
-      key: "executive:total",
+      key: `${business}:executive:total`,
       label: "Total Coffee",
       row: findCategoryRow(lookup, "topline_brands", "Tim Hortons"),
       kind: "total",
     }),
-    rgSegmentNode(lookup, "Tim Hortons", "executive"),
-    singleServeSegmentNode(lookup, "Tim Hortons", "executive"),
-    instantSegmentNode(lookup, "Tim Hortons", "executive"),
+    rgSegmentNode(lookup, "Tim Hortons", `${business}:executive`),
+    singleServeSegmentNode(lookup, "Tim Hortons", `${business}:executive`),
+    instantSegmentNode(lookup, "Tim Hortons", `${business}:executive`),
   ].filter(Boolean);
+}
+
+function soupExecutiveTree(data = state.data) {
+  const rows = data?.views?.category?.rows || [];
+  const lookup = categoryLookup(rows);
+  const children = SOUP_CATEGORY_DEFINITIONS.map((definition) =>
+    categoryNode({
+      key: `${BUSINESS_SOUP}:executive:${definition.key}`,
+      label: definition.label,
+      row: findCategoryRow(
+        lookup,
+        definition.sourcePullType,
+        definition.children.find((child) => child.label === "Tim Hortons")?.product,
+      ),
+      kind: "segment",
+    }),
+  ).filter(Boolean);
+
+  return [
+    categoryNode({
+      key: `${BUSINESS_SOUP}:executive:total`,
+      label: "Soup & Chili",
+      row: aggregateExecutiveRows(children.map((node) => node.row)),
+      kind: "total",
+      children,
+    }),
+  ].filter(Boolean);
+}
+
+function aggregateExecutiveRows(rows) {
+  const validRows = rows.filter(Boolean);
+  if (!validRows.length) return null;
+  const row = {
+    dollarSales000: sumMetric(validRows, "dollarSales000"),
+    dollarSalesChangeYa000: sumMetric(validRows, "dollarSalesChangeYa000"),
+    units000: sumMetric(validRows, "units000"),
+    unitsChangeYa000: sumMetric(validRows, "unitsChangeYa000"),
+    pounds000: sumMetric(validRows, "pounds000"),
+    poundsChangeYa000: sumMetric(validRows, "poundsChangeYa000"),
+  };
+  row.dollarPctChangeYa = pctChangeFromCurrentAndDelta(row.dollarSales000, row.dollarSalesChangeYa000);
+  row.unitsPctChangeYa = pctChangeFromCurrentAndDelta(row.units000, row.unitsChangeYa000);
+  row.poundsPctChangeYa = pctChangeFromCurrentAndDelta(row.pounds000, row.poundsChangeYa000);
+  row.avgUnitsPrice = row.units000 ? row.dollarSales000 / row.units000 : null;
+  row.avgUnitsPricePctChangeYa = weightedAverage(validRows, "avgUnitsPricePctChangeYa", "dollarSales000");
+  row.soldOnPromoPct = weightedAverage(validRows, "soldOnPromoPct", "dollarSales000");
+  row.soldOnPromoChangeYaPct = weightedAverage(validRows, "soldOnPromoChangeYaPct", "dollarSales000");
+  row.acvPct = weightedAverage(validRows, "acvPct", "dollarSales000");
+  row.acvPctChangeYa = weightedAverage(validRows, "acvPctChangeYa", "dollarSales000");
+  return row;
+}
+
+function sumMetric(rows, key) {
+  const values = rows.map((row) => row?.[key]).filter((value) => value != null);
+  return values.length ? values.reduce((total, value) => total + value, 0) : null;
+}
+
+function pctChangeFromCurrentAndDelta(current, delta) {
+  if (current == null || delta == null) return null;
+  const prior = current - delta;
+  return prior ? (delta / prior) * 100 : null;
+}
+
+function weightedAverage(rows, key, weightKey) {
+  let weightedTotal = 0;
+  let weightTotal = 0;
+  rows.forEach((row) => {
+    const value = row?.[key];
+    const weight = row?.[weightKey];
+    if (value == null || weight == null || weight <= 0) return;
+    weightedTotal += value * weight;
+    weightTotal += weight;
+  });
+  return weightTotal ? weightedTotal / weightTotal : null;
 }
 
 function flattenExecutiveTree(nodes, depth = 0) {
@@ -908,7 +1172,7 @@ function dashboardRow(row) {
 }
 
 function dashboardMetricCells(row) {
-  const m = row.metrics;
+  const m = row?.metrics || {};
   return `
     ${plainCell(percent(m.targetShare))}
     ${plainCell(percent(m.benchmarkShare), "scorecard-benchmark-start")}
@@ -966,6 +1230,7 @@ function trendCell(value, formatter, className = "") {
 function renderCategorySummary() {
   const tree = categorySummaryTree();
   const rows = flattenCategoryTree(tree);
+  const label = businessLabel();
   return `
     <section class="view-strip">
       ${metricPill("Market", state.data.filters.market)}
@@ -974,7 +1239,7 @@ function renderCategorySummary() {
     </section>
     <section class="category-summary-card">
       <header>
-        <h2>Coffee Category Summary</h2>
+        <h2>${escapeHtml(label)} Category Summary</h2>
         <span>${escapeHtml(state.data.filters.market)} | ${escapeHtml(state.data.filters.period)}</span>
       </header>
       ${categorySummaryTable(rows)}
@@ -983,34 +1248,38 @@ function renderCategorySummary() {
 }
 
 function categorySummaryTree() {
+  const business = activeBusiness();
   const rows = state.data.views.category.rows;
+  if (business === BUSINESS_SOUP) {
+    return soupCategoryTree(rows);
+  }
   const lookup = categoryLookup(rows);
   const allCoffee = categoryNode({
-    key: "category:all",
+    key: `${business}:category:all`,
     label: "Packaged Coffee & Instant Coffee",
     row: findCategoryRow(lookup, "topline_brands", "Packaged Coffee & Instant Coffee"),
     kind: "total",
     children: [
       categoryNode({
-        key: "category:all:packaged",
+        key: `${business}:category:all:packaged`,
         label: "Packaged Coffee",
         row: findCategoryRow(lookup, "topline_brands", "Packaged Coffee"),
         kind: "segment",
         children: [
-          rgSegmentNode(lookup, null, "category:all:packaged"),
-          singleServeSegmentNode(lookup, null, "category:all:packaged"),
+          rgSegmentNode(lookup, null, `${business}:category:all:packaged`),
+          singleServeSegmentNode(lookup, null, `${business}:category:all:packaged`),
         ],
       }),
-      instantSegmentNode(lookup, null, "category:all"),
+      instantSegmentNode(lookup, null, `${business}:category:all`),
     ],
   });
 
-  const mainBrands = CATEGORY_COMPARE_BRANDS.map((brand) => brandCategoryNode(lookup, brand, `category:brand:${brand}`));
+  const mainBrands = CATEGORY_COMPARE_BRANDS.map((brand) => brandCategoryNode(lookup, brand, `${business}:category:brand:${brand}`));
   const otherBrands = otherBrandNames(rows)
-    .map((brand) => brandCategoryNode(lookup, brand, `category:other:${brand}`, true))
+    .map((brand) => brandCategoryNode(lookup, brand, `${business}:category:other:${brand}`, true))
     .filter(Boolean);
   const allOther = categoryNode({
-    key: "category:other",
+    key: `${business}:category:other`,
     label: "All Other Brands",
     row: findCategoryRow(lookup, "topline_brands", "All Other Brands"),
     kind: "otherTotal",
@@ -1018,6 +1287,23 @@ function categorySummaryTree() {
   });
 
   return [allCoffee, ...mainBrands, allOther].filter(Boolean);
+}
+
+function soupCategoryTree(rows) {
+  const lookup = categoryLookup(rows);
+  return SOUP_CATEGORY_DEFINITIONS.map((definition) => soupCategoryNode(lookup, definition, `${BUSINESS_SOUP}:category`, true)).filter(Boolean);
+}
+
+function soupCategoryNode(lookup, definition, parentKey, isRoot = false) {
+  const sourcePullType = definition.sourcePullType;
+  const key = `${parentKey}:${definition.key || definition.product}`;
+  return categoryNode({
+    key,
+    label: definition.label,
+    row: findCategoryRow(lookup, sourcePullType, definition.product),
+    kind: isRoot ? "total" : definition.children?.length ? "brand" : "detail",
+    children: (definition.children || []).map((child) => soupCategoryNode(lookup, { ...child, sourcePullType }, key)),
+  });
 }
 
 function categoryLookup(rows) {
@@ -1248,6 +1534,7 @@ function filterCategoryTreeBySource(nodes, source) {
 function renderCategoryDetail() {
   const tree = categorySummaryTree();
   const rows = flattenCategoryTree(tree);
+  const label = businessLabel();
   return `
     <section class="view-strip">
       ${metricPill("Market", state.data.filters.market)}
@@ -1256,7 +1543,7 @@ function renderCategoryDetail() {
     </section>
     <section class="workbook-card">
       <header>
-        <h2>Coffee Category Detail</h2>
+        <h2>${escapeHtml(label)} Category Detail</h2>
         <span>${escapeHtml(state.data.filters.market)} | ${escapeHtml(state.data.filters.period)}</span>
       </header>
       ${categoryDetailTable(rows)}
@@ -1318,6 +1605,7 @@ function categoryBrandLabel(node) {
 
 function renderCustomerSummary() {
   const rows = flattenCustomerTree(customerTree(), state.customerSummaryExpanded);
+  const label = businessLabel();
   return `
     <section class="view-strip">
       ${metricPill("Product", state.data.filters.product)}
@@ -1326,7 +1614,7 @@ function renderCustomerSummary() {
     </section>
     <section class="workbook-card">
       <header>
-        <h2>Coffee Customer Summary</h2>
+        <h2>${escapeHtml(label)} Customer Summary</h2>
         <span>${escapeHtml(state.data.filters.product)} | ${escapeHtml(state.data.filters.period)}</span>
       </header>
       ${customerSummaryTable(rows)}
@@ -1336,6 +1624,7 @@ function renderCustomerSummary() {
 
 function renderCustomerDetail() {
   const rows = flattenCustomerTree(customerTree(), state.customerDetailExpanded);
+  const label = businessLabel();
   return `
     <section class="view-strip">
       ${metricPill("Product", state.data.filters.product)}
@@ -1344,7 +1633,7 @@ function renderCustomerDetail() {
     </section>
     <section class="workbook-card">
       <header>
-        <h2>Customer Detail</h2>
+        <h2>${escapeHtml(label)} Customer Detail</h2>
         <span>${escapeHtml(state.data.filters.product)} | ${escapeHtml(state.data.filters.period)}</span>
       </header>
       ${customerDetailTable(rows)}
@@ -1663,6 +1952,13 @@ function authErrorMessage(error) {
 }
 
 function bindInteractions() {
+  document.querySelectorAll("[data-nav-group]").forEach((button) => {
+    button.addEventListener("click", () => {
+      toggleSetValue(state.navGroupsExpanded, button.dataset.navGroup);
+      render();
+    });
+  });
+
   document.querySelectorAll("[data-view]").forEach((button) => {
     button.addEventListener("click", () => {
       const nextView = button.dataset.view;
@@ -1777,6 +2073,7 @@ async function loadDashboard() {
   const filters = activeFilters();
   const params = new URLSearchParams();
 
+  params.set("business", config.business || BUSINESS_COFFEE);
   if (config.controls.includes("market") && filters.market) params.set("market", filters.market);
   if (config.controls.includes("benchmarkMarket") && filters.benchmarkMarket) params.set("benchmarkMarket", filters.benchmarkMarket);
   if (config.controls.includes("period") && filters.period) params.set("period", filters.period);

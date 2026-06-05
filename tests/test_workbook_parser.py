@@ -9,6 +9,7 @@ from backend.workbook import iter_master_rows, master_headers, summarize_workboo
 
 
 DEFAULT_WORKBOOK = Path(r"C:\Users\rbide014\Downloads\July_Coffee Category and Customer Scorecard .xlsx")
+DEFAULT_SOUP_WORKBOOK = Path(r"C:\Users\rbide014\Downloads\Soup and Chili Scorecard 2026-06-05.xlsx")
 
 
 class WorkbookParserTest(unittest.TestCase):
@@ -56,6 +57,24 @@ class WorkbookParserTest(unittest.TestCase):
         self.assertIn("Maxwell House Tassimo", products)
         self.assertIn("Tim Hortons R&G", products)
         self.assertIn("McCafe K Cup", products)
+
+    def test_soup_chili_compiler_reads_three_updated_raw_tabs(self) -> None:
+        workbook = Path(os.environ.get("SOUP_SCORECARD_WORKBOOK_PATH", DEFAULT_SOUP_WORKBOOK))
+        if not workbook.exists():
+            self.skipTest(f"Soup workbook not found: {workbook}")
+
+        summary = summarize_source_pulls([workbook], business="soup_chili")
+        self.assertEqual(summary["total_rows"], 3195)
+        self.assertEqual(summary["sources"]["ready_to_serve"]["rows"], 1450)
+        self.assertEqual(summary["sources"]["condensed"]["rows"], 952)
+        self.assertEqual(summary["sources"]["chili"]["rows"], 793)
+
+        first = next(iter_compiled_pull_rows([workbook], business="soup_chili"))
+        self.assertEqual(first["product"], "Ready to Serve Non Broth")
+        self.assertEqual(first["source_pull_type"], "ready_to_serve")
+        self.assertAlmostEqual(first["dollar_sales_000"], 16177.8364)
+        self.assertAlmostEqual(first["units_000"], 5538.6334)
+        self.assertAlmostEqual(first["pounds_000"], 3161.5769)
 
 
 if __name__ == "__main__":

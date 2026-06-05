@@ -86,6 +86,51 @@ svg {
   margin-top: 16px;
 }
 
+.nav-group {
+  display: grid;
+  gap: 5px;
+}
+
+.nav-group-toggle {
+  align-items: center;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  color: #ffcf95;
+  display: flex;
+  font-size: 0.76rem;
+  font-weight: 900;
+  height: 34px;
+  justify-content: space-between;
+  padding: 0 10px;
+  text-align: left;
+  text-transform: uppercase;
+}
+
+.nav-group.active .nav-group-toggle,
+.nav-group-toggle:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+}
+
+.nav-chevron {
+  border-bottom: 2px solid currentColor;
+  border-right: 2px solid currentColor;
+  height: 8px;
+  transform: rotate(45deg);
+  transition: transform 0.16s ease;
+  width: 8px;
+}
+
+.nav-group.expanded .nav-chevron {
+  transform: rotate(225deg);
+}
+
+.nav-group-items {
+  display: grid;
+  gap: 5px;
+}
+
 .nav-item {
   align-items: center;
   background: transparent;
@@ -1387,6 +1432,10 @@ input:disabled {
   border: 1px solid #cfc6ba;
   border-radius: 8px;
   overflow: hidden;
+}
+
+.executive-secondary-card {
+  margin-top: 16px;
 }
 
 .workbook-card header {

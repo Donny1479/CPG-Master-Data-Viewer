@@ -4,10 +4,14 @@ const DEFAULT_IMPORT_RUNS_TABLE_ID = "import_runs";
 const DEFAULT_IMPORT_METADATA_TABLE_ID = "import_metadata";
 const PAGE_SIZE = 5000;
 const MAX_ROWS = 50000;
+const IMPORT_RUN_LOOKBACK = 50;
 const DEFAULT_TARGET_MARKET = "NATIONAL EX NFLD GDM";
 const DEFAULT_BENCHMARK_MARKET = "NATIONAL EX NFLD GDM";
 const DEFAULT_ALTERNATE_BENCHMARK_MARKET = "NATIONAL CONVENTIONAL GDM";
 const DEFAULT_CUSTOMER_PRODUCT = "Tim Hortons";
+const DEFAULT_SOUP_CUSTOMER_PRODUCT = "Tim Hortons Ready to Serve";
+const DEFAULT_BUSINESS = "coffee";
+const ALL_BUSINESSES = "all";
 
 const OVERVIEW_SECTIONS = [
   {
@@ -71,6 +75,78 @@ const OVERVIEW_SECTIONS = [
     ],
   },
 ];
+
+const SOUP_OVERVIEW_SECTIONS = [
+  {
+    id: "readyToServe",
+    title: "Ready to Serve",
+    pullType: "ready_to_serve",
+    totalProduct: "Ready to Serve Non Broth",
+    timsProduct: "Tim Hortons Ready to Serve",
+    competitiveProduct: "Competitive Brands Ready to Serve",
+    privateLabelProduct: "Private Label Ready to Serve",
+    rows: [
+      { label: "Ready to Serve Non Broth", product: "Ready to Serve Non Broth", pullType: "ready_to_serve" },
+      { label: "Tim Hortons", product: "Tim Hortons Ready to Serve", pullType: "ready_to_serve" },
+      { label: "Campbells", product: "Campbells Ready to Serve", pullType: "ready_to_serve" },
+      { label: "Competitive Brands", product: "Competitive Brands Ready to Serve", pullType: "ready_to_serve" },
+      { label: "Private Label", product: "Private Label Ready to Serve", pullType: "ready_to_serve" },
+    ],
+  },
+  {
+    id: "condensed",
+    title: "Condensed",
+    pullType: "condensed",
+    totalProduct: "Condensed Non Broth",
+    timsProduct: "Tim Hortons Condensed",
+    competitiveProduct: "Competitive Brands Condensed",
+    privateLabelProduct: "Private Label Condensed",
+    rows: [
+      { label: "Condensed Non Broth", product: "Condensed Non Broth", pullType: "condensed" },
+      { label: "Tim Hortons", product: "Tim Hortons Condensed", pullType: "condensed" },
+      { label: "Campbells", product: "Campbells Condensed", pullType: "condensed" },
+      { label: "Competitive Brands", product: "Competitive Brands Condensed", pullType: "condensed" },
+      { label: "Private Label", product: "Private Label Condensed", pullType: "condensed" },
+    ],
+  },
+  {
+    id: "chili",
+    title: "Chili",
+    pullType: "chili",
+    totalProduct: "Chili",
+    timsProduct: "Tim Hortons Chili",
+    competitiveProduct: "Competitive Brands Chili",
+    privateLabelProduct: null,
+    rows: [
+      { label: "Chili", product: "Chili", pullType: "chili" },
+      { label: "Tim Hortons", product: "Tim Hortons Chili", pullType: "chili" },
+      { label: "Campbells", product: "Campbells Chunky Chili", pullType: "chili" },
+      { label: "Stagg", product: "Stagg Chili", pullType: "chili" },
+      { label: "Competitive Brands", product: "Competitive Brands Chili", pullType: "chili" },
+    ],
+  },
+];
+
+const BUSINESS_CONFIGS = {
+  coffee: {
+    id: "coffee",
+    label: "Coffee",
+    overviewTitle: "Coffee Category & Customer Performance Overview",
+    defaultProduct: DEFAULT_CUSTOMER_PRODUCT,
+    defaultTimHortonsProduct: "Tim Hortons",
+    pullTypes: ["topline_brands", "rg", "single_serve", "instant"],
+    overviewSections: OVERVIEW_SECTIONS,
+  },
+  soup_chili: {
+    id: "soup_chili",
+    label: "Soup & Chili",
+    overviewTitle: "Soup & Chili Category & Customer Performance Overview",
+    defaultProduct: DEFAULT_SOUP_CUSTOMER_PRODUCT,
+    defaultTimHortonsProduct: "Tim Hortons Ready to Serve",
+    pullTypes: ["ready_to_serve", "condensed", "chili"],
+    overviewSections: SOUP_OVERVIEW_SECTIONS,
+  },
+};
 
 const CUSTOMER_MARKET_ORDER = [
   "NATIONAL EX NFLD GDM",
@@ -235,7 +311,7 @@ function normalizeRow(row) {
 async function fetchImportRuns(cfg) {
   const result = await appwriteListRows(cfg, cfg.importRunsTableId, [
     { method: "orderDesc", attribute: "$createdAt" },
-    limitQuery(20),
+    limitQuery(IMPORT_RUN_LOOKBACK),
   ]);
   return (result.rows || []).map(normalizeRow);
 }
@@ -309,8 +385,13 @@ function pickDefaultBenchmarkMarket(markets, targetMarket) {
   );
 }
 
-function pickDefaultProduct(products) {
-  return products.find((product) => product === DEFAULT_CUSTOMER_PRODUCT) || products[0] || "";
+function businessConfig(business = DEFAULT_BUSINESS) {
+  return BUSINESS_CONFIGS[business] || BUSINESS_CONFIGS[DEFAULT_BUSINESS];
+}
+
+function pickDefaultProduct(products, business = DEFAULT_BUSINESS) {
+  const config = businessConfig(business);
+  return products.find((product) => product === config.defaultProduct) || products[0] || "";
 }
 
 function numberValue(value) {
@@ -372,7 +453,15 @@ function bySalesDesc(a, b) {
 }
 
 function sourceSortScore(row) {
-  const scores = { topline_brands: 0, rg: 1, single_serve: 2, instant: 3 };
+  const scores = {
+    topline_brands: 0,
+    rg: 1,
+    single_serve: 2,
+    instant: 3,
+    ready_to_serve: 0,
+    condensed: 1,
+    chili: 2,
+  };
   return scores[row.source_pull_type] ?? 9;
 }
 
@@ -422,8 +511,8 @@ function overviewRow(allRows, spec, targetMarket, benchmarkMarket, period) {
   };
 }
 
-function overviewSections(allRows, targetMarket, benchmarkMarket, period) {
-  return OVERVIEW_SECTIONS.map((section) => ({
+function overviewSections(allRows, targetMarket, benchmarkMarket, period, business = DEFAULT_BUSINESS) {
+  return businessConfig(business).overviewSections.map((section) => ({
     id: section.id,
     title: section.title,
     pullType: section.pullType,
@@ -436,6 +525,9 @@ function cleanOverviewBrandLabel(product, section) {
     rg: " R&G",
     singleServe: " Single Serve",
     instant: " Instant Coffee",
+    readyToServe: " Ready to Serve",
+    condensed: " Condensed",
+    chili: " Chili",
   };
   const suffix = suffixes[section.id];
   if (suffix && product.endsWith(suffix)) {
@@ -452,8 +544,8 @@ function isExpandedCompetitorRow(row, section) {
     section.totalProduct,
     section.timsProduct,
     section.competitiveProduct,
-    section.privateLabelProduct,
   ]);
+  if (section.privateLabelProduct) excluded.add(section.privateLabelProduct);
   if (excluded.has(product)) return false;
   if (product.startsWith("Tim Hortons") || product.startsWith("Private Label") || product.startsWith("Competitive Brands")) {
     return false;
@@ -470,6 +562,15 @@ function isExpandedCompetitorRow(row, section) {
   }
   if (section.id === "instant") {
     return product.endsWith(" Instant Coffee");
+  }
+  if (section.id === "readyToServe") {
+    return product.endsWith(" Ready to Serve");
+  }
+  if (section.id === "condensed") {
+    return product.endsWith(" Condensed");
+  }
+  if (section.id === "chili") {
+    return product.endsWith(" Chili");
   }
   return false;
 }
@@ -500,14 +601,16 @@ function expandedCompetitorSpecs(allRows, section, targetMarket, benchmarkMarket
     }));
 }
 
-function expandedOverviewSections(allRows, targetMarket, benchmarkMarket, period) {
-  return OVERVIEW_SECTIONS.map((section) => {
+function expandedOverviewSections(allRows, targetMarket, benchmarkMarket, period, business = DEFAULT_BUSINESS) {
+  return businessConfig(business).overviewSections.map((section) => {
     const rows = [
       { label: section.totalProduct, product: section.totalProduct, pullType: section.pullType, kind: "total" },
       { label: "Tim Hortons", product: section.timsProduct, pullType: section.pullType, kind: "tims" },
       ...expandedCompetitorSpecs(allRows, section, targetMarket, benchmarkMarket, period),
-      { label: "Private Label", product: section.privateLabelProduct, pullType: section.pullType, kind: "privateLabel" },
     ];
+    if (section.privateLabelProduct) {
+      rows.push({ label: "Private Label", product: section.privateLabelProduct, pullType: section.pullType, kind: "privateLabel" });
+    }
 
     return {
       id: section.id,
@@ -537,6 +640,40 @@ function parseImportMetadata(importRun) {
   }
 }
 
+function inferBusinessFromMetadata(metadata) {
+  if (metadata?.business && BUSINESS_CONFIGS[metadata.business]) return metadata.business;
+  const sourceCounts = metadata?.sourceCounts || {};
+  if ("ready_to_serve" in sourceCounts || "condensed" in sourceCounts || "chili" in sourceCounts) {
+    return "soup_chili";
+  }
+  return DEFAULT_BUSINESS;
+}
+
+async function importRunContexts(cfg, importRuns) {
+  return Promise.all(
+    importRuns.map(async (run) => {
+      const metadataRow = await appwriteGetRow(cfg, cfg.importMetadataTableId, run.$id);
+      const metadata = parseImportMetadata(metadataRow) || parseImportMetadata(run);
+      return {
+        run,
+        metadata,
+        business: inferBusinessFromMetadata(metadata),
+      };
+    }),
+  );
+}
+
+function selectImportContext(contexts, business, requestedImportRunId = "") {
+  if (requestedImportRunId) {
+    return contexts.find((context) => context.run.$id === requestedImportRunId) || null;
+  }
+  return (
+    contexts.find((context) => context.business === business && context.run.status === "complete") ||
+    contexts.find((context) => context.business === business) ||
+    null
+  );
+}
+
 function metadataOptions(metadata) {
   const options = metadata?.options || {};
   const markets = Array.isArray(options.markets) ? options.markets.filter(Boolean) : [];
@@ -545,7 +682,7 @@ function metadataOptions(metadata) {
   return markets.length || periods.length || products.length ? { markets, periods, products } : null;
 }
 
-function resolveFilters(options, selectedMarket, selectedBenchmarkMarket, selectedPeriod, selectedProduct) {
+function resolveFilters(options, selectedMarket, selectedBenchmarkMarket, selectedPeriod, selectedProduct, business = DEFAULT_BUSINESS) {
   const markets = options?.markets || [];
   const periods = options?.periods || [];
   const products = options?.products || [];
@@ -555,7 +692,7 @@ function resolveFilters(options, selectedMarket, selectedBenchmarkMarket, select
       ? selectedBenchmarkMarket
       : pickDefaultBenchmarkMarket(markets, market);
   const period = selectedPeriod && periods.includes(selectedPeriod) ? selectedPeriod : pickDefaultPeriod(periods);
-  const product = selectedProduct && products.includes(selectedProduct) ? selectedProduct : pickDefaultProduct(products);
+  const product = selectedProduct && products.includes(selectedProduct) ? selectedProduct : pickDefaultProduct(products, business);
   return { market, benchmarkMarket, period, product };
 }
 
@@ -584,7 +721,9 @@ function dashboardPayload(
   options,
   totalLoadedRows,
   importMetadata,
+  business = DEFAULT_BUSINESS,
 ) {
+  const config = businessConfig(business);
   const markets = options?.markets?.length ? options.markets : uniqueSorted(allRows, "market");
   const periods = options?.periods?.length ? options.periods : uniqueSorted(allRows, "period");
   const products = options?.products?.length ? options.products : uniqueSorted(allRows, "product");
@@ -594,35 +733,32 @@ function dashboardPayload(
       ? selectedBenchmarkMarket
       : pickDefaultBenchmarkMarket(markets, market);
   const period = selectedPeriod && periods.includes(selectedPeriod) ? selectedPeriod : pickDefaultPeriod(periods);
-  const product = selectedProduct && products.includes(selectedProduct) ? selectedProduct : pickDefaultProduct(products);
+  const product = selectedProduct && products.includes(selectedProduct) ? selectedProduct : pickDefaultProduct(products, business);
 
   const scope = allRows.filter((row) => row.market === market && row.period === period);
   const byProduct = (productName, pullType) =>
     scope.find((row) => row.product === productName && (!pullType || row.source_pull_type === pullType));
 
-  const comparisonProducts = [
-    { product: "Packaged Coffee & Instant Coffee", pullType: "topline_brands" },
-    { product: "Tim Hortons", pullType: "topline_brands" },
-    { product: "Competitive Brands", pullType: "topline_brands" },
-    { product: "Private Label", pullType: "topline_brands" },
-  ];
+  const primarySection = config.overviewSections[0];
+  const comparisonProducts = primarySection.rows.map((item) => ({ product: item.product, pullType: item.pullType }));
 
   const comparison = comparisonProducts.map((item) => compactRow(byProduct(item.product, item.pullType))).filter(Boolean);
-  const category = compactRow(byProduct("Packaged Coffee & Instant Coffee", "topline_brands"));
-  const tims = compactRow(byProduct("Tim Hortons", "topline_brands"));
-  const competitive = compactRow(byProduct("Competitive Brands", "topline_brands"));
-  const privateLabel = compactRow(byProduct("Private Label", "topline_brands"));
+  const category = compactRow(byProduct(primarySection.totalProduct, primarySection.pullType));
+  const tims = compactRow(byProduct(primarySection.timsProduct, primarySection.pullType));
+  const competitive = compactRow(byProduct(primarySection.competitiveProduct, primarySection.pullType));
+  const privateLabel = compactRow(byProduct(primarySection.privateLabelProduct, primarySection.pullType));
 
-  const excludedLeaderboard = new Set([
-    "Packaged Coffee & Instant Coffee",
-    "Packaged Coffee",
-    "Instant Coffee",
-    "Competitive Brands",
-    "Private Label",
-  ]);
+  const excludedLeaderboard = new Set(
+    config.overviewSections.flatMap((section) => [
+      section.totalProduct,
+      section.timsProduct,
+      section.competitiveProduct,
+      section.privateLabelProduct,
+    ]),
+  );
 
   const brandLeaders = scope
-    .filter((row) => row.source_pull_type === "topline_brands")
+    .filter((row) => row.source_pull_type === primarySection.pullType)
     .filter((row) => row.product && !excludedLeaderboard.has(row.product))
     .sort(bySalesDesc)
     .slice(0, 12)
@@ -646,7 +782,7 @@ function dashboardPayload(
     .map(compactRow);
 
   const marketTable = allRows
-    .filter((row) => row.period === period && row.product === "Tim Hortons")
+    .filter((row) => row.period === period && row.product === config.defaultTimHortonsProduct)
     .sort(bySalesDesc)
     .slice(0, 18)
     .map(compactRow);
@@ -663,9 +799,12 @@ function dashboardPayload(
           rowCount: latestImport.row_count,
           completedAt: latestImport.completed_at,
           source: latestMetadata?.source || null,
+          business: latestMetadata?.business || business,
           sourceCounts: latestMetadata?.sourceCounts || null,
         }
       : null,
+    business,
+    businessLabel: config.label,
     filters: { market, benchmarkMarket, period, product, markets, periods, products },
     counts: {
       loadedRows: totalLoadedRows || allRows.length,
@@ -675,12 +814,12 @@ function dashboardPayload(
     },
     views: {
       overview: {
-        title: "Coffee Category & Customer Performance Overview",
+        title: config.overviewTitle,
         targetMarket: market,
         benchmarkMarket,
         period,
-        sections: overviewSections(allRows, market, benchmarkMarket, period),
-        brandSections: expandedOverviewSections(allRows, market, benchmarkMarket, period),
+        sections: overviewSections(allRows, market, benchmarkMarket, period, business),
+        brandSections: expandedOverviewSections(allRows, market, benchmarkMarket, period, business),
       },
       category: {
         market,
@@ -701,6 +840,80 @@ function dashboardPayload(
   };
 }
 
+async function buildBusinessDashboardPayload(cfg, context, request, business, overrides = {}) {
+  const config = businessConfig(business);
+  const metadata = context?.metadata || null;
+  const options = metadataOptions(metadata);
+  const selectedMarket = overrides.market ?? queryValue(request.query.market);
+  const selectedBenchmarkMarket = overrides.benchmarkMarket ?? queryValue(request.query.benchmarkMarket);
+  const selectedPeriod = overrides.period ?? queryValue(request.query.period);
+  const selectedProduct = overrides.product ?? queryValue(request.query.product);
+  const importRunId = context?.run?.$id || "";
+
+  if (!context || !importRunId) {
+    return dashboardPayload(
+      [],
+      [],
+      selectedMarket,
+      selectedBenchmarkMarket,
+      selectedPeriod,
+      selectedProduct,
+      { markets: [], periods: [], products: [] },
+      0,
+      null,
+      business,
+    );
+  }
+
+  let rows;
+  let selected;
+  if (options) {
+    selected = resolveFilters(
+      options,
+      selectedMarket,
+      selectedBenchmarkMarket,
+      selectedPeriod,
+      selectedProduct,
+      business,
+    );
+
+    const [targetRows, benchmarkRows, customerRows, timHortonsRows] = await Promise.all([
+      fetchScorecardRows(cfg, importRunId, { market: selected.market, period: selected.period }, 3000),
+      selected.benchmarkMarket && selected.benchmarkMarket !== selected.market
+        ? fetchScorecardRows(cfg, importRunId, { market: selected.benchmarkMarket, period: selected.period }, 3000)
+        : Promise.resolve([]),
+      selected.product
+        ? fetchScorecardRows(cfg, importRunId, { product: selected.product, period: selected.period }, 1500)
+        : Promise.resolve([]),
+      selected.product && selected.product !== config.defaultTimHortonsProduct
+        ? fetchScorecardRows(cfg, importRunId, { product: config.defaultTimHortonsProduct, period: selected.period }, 1500)
+        : Promise.resolve([]),
+    ]);
+    rows = dedupeRows([targetRows, benchmarkRows, customerRows, timHortonsRows]);
+  } else {
+    rows = await fetchScorecardRows(cfg, importRunId);
+    selected = {
+      market: selectedMarket,
+      benchmarkMarket: selectedBenchmarkMarket,
+      period: selectedPeriod,
+      product: selectedProduct,
+    };
+  }
+
+  return dashboardPayload(
+    rows,
+    [context.run],
+    selected.market,
+    selected.benchmarkMarket,
+    selected.period,
+    selected.product,
+    options,
+    metadata?.rowCount || context.run.row_count,
+    metadata,
+    business,
+  );
+}
+
 export default async function handler(request, response) {
   if (request.method !== "GET") {
     response.status(405).json({ error: "Method not allowed" });
@@ -719,65 +932,48 @@ export default async function handler(request, response) {
     }
 
     const importRuns = await fetchImportRuns(cfg);
+    const contexts = await importRunContexts(cfg, importRuns);
     const requestedImportRunId = queryValue(request.query.importRunId);
-    const selectedImportRun =
-      (requestedImportRunId && importRuns.find((run) => run.$id === requestedImportRunId)) ||
-      importRuns.find((run) => run.status === "complete") ||
-      importRuns[0] ||
-      null;
-    const importRunId = requestedImportRunId || selectedImportRun?.$id;
-    const metadataRow = await appwriteGetRow(cfg, cfg.importMetadataTableId, importRunId);
-    const metadata = parseImportMetadata(metadataRow) || parseImportMetadata(selectedImportRun);
-    const options = metadataOptions(metadata);
+    const requestedBusiness = queryValue(request.query.business) || DEFAULT_BUSINESS;
 
-    let rows;
-    let selected;
-    if (options) {
-      selected = resolveFilters(
-        options,
-        queryValue(request.query.market),
-        queryValue(request.query.benchmarkMarket),
-        queryValue(request.query.period),
-        queryValue(request.query.product),
-      );
-
-      const [targetRows, benchmarkRows, customerRows, timHortonsRows] = await Promise.all([
-        fetchScorecardRows(cfg, importRunId, { market: selected.market, period: selected.period }, 2000),
-        selected.benchmarkMarket && selected.benchmarkMarket !== selected.market
-          ? fetchScorecardRows(cfg, importRunId, { market: selected.benchmarkMarket, period: selected.period }, 2000)
-          : Promise.resolve([]),
-        selected.product
-          ? fetchScorecardRows(cfg, importRunId, { product: selected.product, period: selected.period }, 1000)
-          : Promise.resolve([]),
-        selected.product && selected.product !== DEFAULT_CUSTOMER_PRODUCT
-          ? fetchScorecardRows(cfg, importRunId, { product: DEFAULT_CUSTOMER_PRODUCT, period: selected.period }, 1000)
-          : Promise.resolve([]),
+    if (requestedBusiness === ALL_BUSINESSES) {
+      const coffeeContext = selectImportContext(contexts, "coffee");
+      const soupContext = selectImportContext(contexts, "soup_chili");
+      const [coffee, soupChili] = await Promise.all([
+        buildBusinessDashboardPayload(cfg, coffeeContext, request, "coffee"),
+        buildBusinessDashboardPayload(cfg, soupContext, request, "soup_chili"),
       ]);
-      rows = dedupeRows([targetRows, benchmarkRows, customerRows, timHortonsRows]);
-    } else {
-      rows = await fetchScorecardRows(cfg, importRunId);
-      selected = {
-        market: queryValue(request.query.market),
-        benchmarkMarket: queryValue(request.query.benchmarkMarket),
-        period: queryValue(request.query.period),
-        product: queryValue(request.query.product),
-      };
+      const loadedRows = (coffee.counts?.loadedRows || 0) + (soupChili.counts?.loadedRows || 0);
+      const apiRowsLoaded = (coffee.counts?.apiRowsLoaded || 0) + (soupChili.counts?.apiRowsLoaded || 0);
+
+      response.setHeader("Cache-Control", "s-maxage=300, stale-while-revalidate=900");
+      response.status(200).json({
+        ...coffee,
+        business: ALL_BUSINESSES,
+        businessLabel: "All Insights",
+        latestImport: {
+          coffee: coffee.latestImport,
+          soupChili: soupChili.latestImport,
+        },
+        counts: {
+          ...coffee.counts,
+          loadedRows,
+          apiRowsLoaded,
+        },
+        businesses: {
+          coffee,
+          soupChili,
+        },
+      });
+      return;
     }
 
+    const business = BUSINESS_CONFIGS[requestedBusiness] ? requestedBusiness : DEFAULT_BUSINESS;
+    const selectedContext = selectImportContext(contexts, business, requestedImportRunId);
+    const payload = await buildBusinessDashboardPayload(cfg, selectedContext, request, business);
+
     response.setHeader("Cache-Control", "s-maxage=300, stale-while-revalidate=900");
-    response.status(200).json(
-      dashboardPayload(
-        rows,
-        importRuns,
-        selected.market,
-        selected.benchmarkMarket,
-        selected.period,
-        selected.product,
-        options,
-        metadata?.rowCount || selectedImportRun?.row_count,
-        metadata,
-      ),
-    );
+    response.status(200).json(payload);
   } catch (error) {
     response.status(500).json({
       error: "Dashboard data unavailable",

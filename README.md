@@ -106,9 +106,9 @@ python -m backend.import_workbook "C:\Users\rbide014\Downloads\July_Coffee Categ
 
 The importer reads the workbook `Master Table`, normalizes the Excel headers into Appwrite-safe column keys, and upserts rows in batches.
 
-## Import The Four Nielsen Pulls
+## Import The Nielsen Pulls
 
-Preferred monthly refresh flow:
+Preferred monthly coffee refresh flow:
 
 ```powershell
 python -m backend.import_nielsen_pulls "C:\path\to\Topline Brands.xlsx" "C:\path\to\Single Serve.xlsx" "C:\path\to\Instant.xlsx" "C:\path\to\R&G.xlsx" --dry-run
@@ -130,3 +130,18 @@ You can also pass one Nielsen export workbook if it contains all four tabs. The 
 It then normalizes `NUMBER OF PACKETS` to `SIZE`, builds the dashboard `Products` field, filters out Nielsen footer rows, and appends the four pulls into one scorecard row stream.
 
 The importer also writes compact dashboard metadata to `import_metadata` so the Vercel API can populate dropdowns without scanning the full scorecard table on every request.
+
+Preferred monthly soup and chili refresh flow:
+
+```powershell
+python -m backend.import_nielsen_pulls --business soup_chili "C:\path\to\Soup and Chili Scorecard.xlsx" --dry-run
+python -m backend.import_nielsen_pulls --business soup_chili "C:\path\to\Soup and Chili Scorecard.xlsx"
+```
+
+The soup/chili compiler auto-detects the three Nielsen raw tabs:
+
+- Ready to Serve
+- Condensed
+- Chili
+
+Coffee and soup/chili imports are tracked as separate business datasets, so a new soup import will not replace the coffee dashboards and a new coffee import will not replace the soup dashboards.

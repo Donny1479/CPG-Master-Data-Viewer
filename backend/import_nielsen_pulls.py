@@ -38,22 +38,28 @@ def combined_file_sha(paths: list[Path]) -> str:
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Compile the four Nielsen pulls and import dashboard-ready rows into Appwrite."
+        description="Compile Nielsen pulls and import dashboard-ready rows into Appwrite."
     )
     parser.add_argument(
         "paths",
         nargs="+",
-        help="One workbook containing all four Nielsen tabs, or four separate pull workbooks.",
+        help="One workbook containing the Nielsen tabs, or separate pull workbooks.",
+    )
+    parser.add_argument(
+        "--business",
+        choices=("coffee", "soup_chili"),
+        default="coffee",
+        help="Select the pull structure to compile. Coffee expects 4 pulls; soup_chili expects Ready to Serve, Condensed, and Chili.",
     )
     parser.add_argument("--dry-run", action="store_true", help="Parse the pulls without sending rows to Appwrite.")
     parser.add_argument("--limit", type=int, default=None, help="Limit imported rows for testing.")
     args = parser.parse_args()
 
     paths = [Path(item) for item in args.paths]
-    import_run_id = combined_import_run_id(paths)
+    import_run_id = combined_import_run_id(paths, args.business)
 
     if args.dry_run:
-        summary = summarize_source_pulls(paths)
+        summary = summarize_source_pulls(paths, business=args.business)
         print(f"Dry run OK: {summary['total_rows']} compiled rows detected")
         print(f"Import run ID: {summary['import_run_id']}")
         for pull_type, source in summary["sources"].items():
@@ -80,7 +86,7 @@ def main() -> None:
         config.table_permissions,
     )
 
-    rows = iter_compiled_pull_rows(paths, import_run_id=import_run_id, limit=args.limit)
+    rows = iter_compiled_pull_rows(paths, import_run_id=import_run_id, limit=args.limit, business=args.business)
     imported = 0
     markets: set[str] = set()
     periods: set[str] = set()
@@ -105,6 +111,7 @@ def main() -> None:
     metadata_json = json.dumps(
         {
             "source": "nielsen_raw_tabs",
+            "business": args.business,
             "rowCount": imported,
             "sourceCounts": source_counts,
             "options": {

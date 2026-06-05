@@ -6,16 +6,30 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Iterator
 
-from openpyxl import load_workbook
-
 from .schema import EXCEL_TO_APPWRITE_COLUMN
-from .workbook import appwrite_row_id, file_sha256, normalize_cell, row_hash
+from .workbook import appwrite_row_id, file_sha256, load_data_workbook, normalize_cell, row_hash
 
-SOURCE_PULL_TYPES = {
+COFFEE_PULL_TYPES = {
     "topline_brands",
     "single_serve",
     "instant",
     "rg",
+}
+
+SOUP_CHILI_PULL_TYPES = {
+    "ready_to_serve",
+    "condensed",
+    "chili",
+}
+
+BUSINESS_PULL_TYPES = {
+    "coffee": COFFEE_PULL_TYPES,
+    "soup_chili": SOUP_CHILI_PULL_TYPES,
+}
+
+PULL_ORDER = {
+    "coffee": ["topline_brands", "single_serve", "instant", "rg"],
+    "soup_chili": ["ready_to_serve", "condensed", "chili"],
 }
 
 SKIP_SHEET_NAMES = {
@@ -29,7 +43,12 @@ SKIP_SHEET_NAMES = {
     "summary_coffee customer ",
     "coffee customer",
     "master table",
+    "mastertable",
     "index",
+    "summary_soup and chili customer",
+    "soup & chili customer scorecard",
+    "summary_soup and chili category",
+    "soup and chili category",
 }
 
 
@@ -42,16 +61,29 @@ class SourceSheet:
     headers: list[str]
 
 
-def combined_import_run_id(paths: list[str | Path]) -> str:
+def combined_import_run_id(paths: list[str | Path], business: str = "coffee") -> str:
     digest = hashlib.sha256()
+    digest.update(business.encode("utf-8"))
     for path in sorted(Path(item).resolve() for item in paths):
         digest.update(path.name.encode("utf-8"))
         digest.update(file_sha256(path).encode("utf-8"))
     return f"imp_{digest.hexdigest()[:28]}"
 
 
-def classify_headers(headers: list[str]) -> str | None:
+def classify_headers(headers: list[str], sheet_name: str = "", business: str = "coffee") -> str | None:
     header_set = {header for header in headers if header}
+    normalized_sheet_name = sheet_name.strip().lower()
+
+    if business == "soup_chili":
+        if {"Markets", "Periods", "Products", "KGS (000)"}.issubset(header_set):
+            if "ready to serve" in normalized_sheet_name:
+                return "ready_to_serve"
+            if "condensed" in normalized_sheet_name:
+                return "condensed"
+            if "chili" in normalized_sheet_name:
+                return "chili"
+        return None
+
     if (
         {"Markets", "Periods", "Products"}.issubset(header_set)
         and "TH CATEGORY" not in header_set
@@ -67,12 +99,16 @@ def classify_headers(headers: list[str]) -> str | None:
     return None
 
 
-def discover_source_sheets(paths: list[str | Path]) -> dict[str, SourceSheet]:
+def discover_source_sheets(paths: list[str | Path], business: str = "coffee") -> dict[str, SourceSheet]:
+    if business not in BUSINESS_PULL_TYPES:
+        raise ValueError(f"Unsupported Nielsen business: {business}")
+
+    expected_pull_types = BUSINESS_PULL_TYPES[business]
     discovered: dict[str, SourceSheet] = {}
 
     for raw_path in paths:
         path = Path(raw_path)
-        workbook = load_workbook(path, read_only=True, data_only=True)
+        workbook = load_data_workbook(path)
         for worksheet in workbook.worksheets:
             if worksheet.title.strip().lower() in SKIP_SHEET_NAMES:
                 continue
@@ -81,7 +117,7 @@ def discover_source_sheets(paths: list[str | Path]) -> dict[str, SourceSheet]:
                 start=1,
             ):
                 headers = [str(value).strip() if value is not None else "" for value in row]
-                pull_type = classify_headers(headers)
+                pull_type = classify_headers(headers, worksheet.title, business)
                 if not pull_type:
                     continue
                 if pull_type in discovered:
@@ -93,7 +129,7 @@ def discover_source_sheets(paths: list[str | Path]) -> dict[str, SourceSheet]:
                 discovered[pull_type] = SourceSheet(pull_type, path, worksheet.title, row_number, headers)
                 break
 
-    missing = sorted(SOURCE_PULL_TYPES - set(discovered))
+    missing = sorted(expected_pull_types - set(discovered))
     if missing:
         found = ", ".join(sorted(discovered)) or "none"
         raise ValueError(f"Missing Nielsen pull(s): {missing}. Found: {found}")
@@ -110,6 +146,8 @@ def product_case(value: Any) -> str | None:
     fixed = text.title()
     fixed = fixed.replace("Ao", "AO")
     fixed = fixed.replace("Mccafe", "McCafe")
+    fixed = fixed.replace(" To ", " to ")
+    fixed = fixed.replace(" And ", " and ")
     return fixed
 
 
@@ -147,22 +185,26 @@ def iter_compiled_pull_rows(
     paths: list[str | Path],
     import_run_id: str | None = None,
     limit: int | None = None,
+    business: str = "coffee",
 ) -> Iterator[dict[str, Any]]:
-    source_sheets = discover_source_sheets(paths)
+    source_sheets = discover_source_sheets(paths, business)
     source_shas = _source_file_shas(source_sheets)
-    import_run_id = import_run_id or combined_import_run_id(paths)
+    import_run_id = import_run_id or combined_import_run_id(paths, business)
 
     emitted = 0
-    for pull_type in ["topline_brands", "single_serve", "instant", "rg"]:
+    for pull_type in PULL_ORDER[business]:
         source = source_sheets[pull_type]
-        workbook = load_workbook(source.file_path, read_only=True, data_only=True)
+        workbook = load_data_workbook(source.file_path)
         worksheet = workbook[source.sheet_name]
         rows = worksheet.iter_rows(min_row=source.header_row, values_only=True)
         headers = [str(value).strip() if value is not None else "" for value in next(rows)]
 
         for source_row_number, values in enumerate(rows, start=source.header_row + 1):
             raw = dict(zip(headers, values))
-            if pull_type == "topline_brands":
+            if business == "soup_chili":
+                product = product_case(raw.get("Products"))
+                size = raw.get("SIZE")
+            elif pull_type == "topline_brands":
                 product = product_case(raw.get("Products"))
                 size = raw.get("SIZE")
             else:
@@ -201,16 +243,17 @@ def iter_compiled_pull_rows(
                 return
 
 
-def summarize_source_pulls(paths: list[str | Path]) -> dict[str, Any]:
-    source_sheets = discover_source_sheets(paths)
-    rows = list(iter_compiled_pull_rows(paths))
+def summarize_source_pulls(paths: list[str | Path], business: str = "coffee") -> dict[str, Any]:
+    source_sheets = discover_source_sheets(paths, business)
+    rows = list(iter_compiled_pull_rows(paths, business=business))
     counts: dict[str, int] = {}
     for row in rows:
         pull_type = row["source_pull_type"]
         counts[pull_type] = counts.get(pull_type, 0) + 1
 
     return {
-        "import_run_id": combined_import_run_id(paths),
+        "business": business,
+        "import_run_id": combined_import_run_id(paths, business),
         "sources": {
             pull_type: {
                 "file": str(sheet.file_path),

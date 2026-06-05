@@ -1,17 +1,42 @@
 from __future__ import annotations
 
 import hashlib
+import io
 import json
 import re
+import zipfile
 from collections import Counter
 from pathlib import Path
 from typing import Any, Iterator
 
-from openpyxl import load_workbook
+from openpyxl import load_workbook as _openpyxl_load_workbook
 
 from .schema import DIMENSION_KEYS, EXCEL_TO_APPWRITE_COLUMN, METRIC_KEYS, REQUIRED_MASTER_HEADERS
 
 MASTER_SHEET = "Master Table"
+
+
+def load_data_workbook(path: str | Path):
+    source_path = Path(path)
+    try:
+        return _openpyxl_load_workbook(source_path, read_only=True, data_only=True)
+    except ValueError as exc:
+        if "stylesheet" not in str(exc).lower():
+            raise
+
+        buffer = io.BytesIO()
+        with zipfile.ZipFile(source_path, "r") as source_zip, zipfile.ZipFile(buffer, "w") as target_zip:
+            for item in source_zip.infolist():
+                data = source_zip.read(item.filename)
+                if item.filename == "xl/styles.xml":
+                    text = data.decode("utf-8", errors="replace")
+                    text = re.sub(r'<u\s+val="dash"\s*/>', '<u val="single" />', text)
+                    data = text.encode("utf-8")
+                target_zip.writestr(item, data)
+        buffer.seek(0)
+        workbook = _openpyxl_load_workbook(buffer, read_only=True, data_only=True)
+        workbook._codex_sanitized_stream = buffer
+        return workbook
 
 
 def file_sha256(path: str | Path) -> str:
@@ -79,7 +104,7 @@ def normalize_cell(appwrite_key: str, value: Any) -> Any:
 
 
 def master_headers(path: str | Path) -> list[str]:
-    workbook = load_workbook(path, read_only=True, data_only=True)
+    workbook = load_data_workbook(path)
     if MASTER_SHEET not in workbook.sheetnames:
         raise ValueError(f"Workbook does not contain required sheet: {MASTER_SHEET}")
     worksheet = workbook[MASTER_SHEET]
@@ -102,7 +127,7 @@ def iter_master_rows(
     source_sha = file_sha256(source_path)
     import_run_id = import_run_id or f"imp_{source_sha[:28]}"
 
-    workbook = load_workbook(source_path, read_only=True, data_only=True)
+    workbook = load_data_workbook(source_path)
     if MASTER_SHEET not in workbook.sheetnames:
         raise ValueError(f"Workbook does not contain required sheet: {MASTER_SHEET}")
 
@@ -144,7 +169,7 @@ def iter_master_rows(
 
 def summarize_workbook(path: str | Path) -> dict[str, Any]:
     source_path = Path(path)
-    workbook = load_workbook(source_path, read_only=True, data_only=True)
+    workbook = load_data_workbook(source_path)
     summary: dict[str, Any] = {
         "file": str(source_path),
         "size_mb": round(source_path.stat().st_size / 1024 / 1024, 2),
