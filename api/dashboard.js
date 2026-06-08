@@ -19,6 +19,8 @@ const DEFAULT_MARKET_VIEW_BRAND_PACK = "Private Label Single Serve";
 const MARKET_VIEW_BASELINE_PRODUCT = "Packaged Coffee & Instant Coffee";
 const DEFAULT_PRICE_METRIC = "Avg Units Price";
 const DEFAULT_PRICE_CHANGE_METRIC = "Avg Units Price % Chg YA";
+const DEFAULT_COMPETITIVE_DISPLAY_CATEGORY = "Packaged Coffee - Single Serve";
+const DEFAULT_COMPETITIVE_DISPLAY_METRIC = "$ Shr of TDP - Any Display";
 
 const OVERVIEW_SECTIONS = [
   {
@@ -196,6 +198,50 @@ const PRICE_CHANGE_METRICS = [
   "Avg Pounds Price % Chg YA",
   "Any Promo Pounds Price % Chg YA",
   "No Promo Pounds Price % Chg YA",
+];
+
+const COMPETITIVE_DISPLAY_CATEGORIES = [
+  "Packaged Coffee - Single Serve",
+  "Packaged Coffee - R&G",
+  "Instant Coffee",
+];
+
+const COMPETITIVE_DISPLAY_METRICS = [
+  "$ Shr of TDP - Any Display",
+  "$ Shr of Distribution (TDP) on Display",
+];
+
+const COMPETITIVE_DISPLAY_AGGREGATES = new Set(
+  [
+    "Packaged Coffee & Instant Coffee",
+    "Instant Coffee",
+    "Packaged Coffee",
+    "All Other Brands",
+    "Competitive Brands",
+    "Competitive Brands Single Serve",
+    "Competitive Brands R&G",
+    "Competitive Brands Instant Coffee",
+    "All Other Brands Single Serve",
+    "All Other Brands R&G",
+    "All Other Brands Instant Coffee",
+    "Single Serve",
+    "R&G",
+  ].map((product) => product.toUpperCase()),
+);
+
+const COMPETITIVE_DISPLAY_EXCLUDED_TERMS = [
+  "K CUP",
+  "CAPS",
+  "INSTANT REGULAR",
+  "INSTANT GRAND",
+  "CUP",
+  "CUPS",
+  "TASSIMO",
+  "BAG",
+  "CAN",
+  "SMALL",
+  "LARGE",
+  "CLUB FORMAT",
 ];
 
 const CUSTOMER_MARKET_ORDER = [
@@ -862,6 +908,82 @@ function makeSeriesPayload(periods, products, labels, points) {
   };
 }
 
+function impactDisplayPayload(lookup, monthlyPeriods, market, product) {
+  const sharePoints = dashboardSeries(lookup, monthlyPeriods, market, [product], "$ Shr - Product");
+  const displayPoints = dashboardSeries(lookup, monthlyPeriods, market, [product], "$ Shr of Distribution (TDP) on Display");
+  const pricePoints = dashboardSeries(lookup, monthlyPeriods, market, [product], "Avg Units Price");
+  return {
+    market,
+    product,
+    shareDisplay: {
+      periods: monthlyPeriods,
+      series: [
+        {
+          label: "$ Shr - Product",
+          product,
+          values: sharePoints.map((point) => point.values[0]),
+        },
+        {
+          label: "$ Shr of Distribution (TDP) on Display",
+          product,
+          values: displayPoints.map((point) => point.values[0]),
+        },
+      ],
+    },
+    price: {
+      periods: monthlyPeriods,
+      series: [
+        {
+          label: "Avg Units Price",
+          product,
+          values: pricePoints.map((point) => point.values[0]),
+        },
+      ],
+    },
+  };
+}
+
+function competitiveDisplayPullType(category) {
+  if (category === "Packaged Coffee - R&G") return "rg";
+  if (category === "Instant Coffee") return "instant";
+  return "single_serve";
+}
+
+function isCompetitiveDisplayCandidate(row, category) {
+  const product = String(row.product || "").trim();
+  if (!product) return false;
+  const normalized = product.toUpperCase();
+  if (COMPETITIVE_DISPLAY_AGGREGATES.has(normalized)) return false;
+  if (COMPETITIVE_DISPLAY_EXCLUDED_TERMS.some((term) => normalized.includes(term))) return false;
+  return row.source_pull_type === competitiveDisplayPullType(category);
+}
+
+function competitiveDisplayTopProducts(rows, market, rankingPeriod, category, metricLabel) {
+  const metricKey = dashboardMetricKey(metricLabel);
+  return rows
+    .filter((row) => row.market === market && row.period === rankingPeriod)
+    .filter((row) => isCompetitiveDisplayCandidate(row, category))
+    .map((row) => ({ product: row.product, value: numberValue(row[metricKey]) }))
+    .filter((row) => row.value != null)
+    .sort((a, b) => b.value - a.value || String(a.product).localeCompare(String(b.product)))
+    .slice(0, 8)
+    .map((row) => row.product);
+}
+
+function competitiveDisplayPayload(rows, lookup, monthlyPeriods, market, category, metricLabel) {
+  const rankingPeriod = monthlyPeriods[0] || "";
+  const products = competitiveDisplayTopProducts(rows, market, rankingPeriod, category, metricLabel);
+  const points = dashboardSeries(lookup, monthlyPeriods, market, products, metricLabel);
+  return {
+    market,
+    category,
+    metric: metricLabel,
+    rankingPeriod,
+    topProducts: products,
+    display: makeSeriesPayload(monthlyPeriods, products, products, points),
+  };
+}
+
 function marketViewRows(rows, baselineRows, period, product) {
   const lookup = dashboardRowLookup(rows);
   const baselineLookup = dashboardRowLookup(baselineRows);
@@ -912,6 +1034,8 @@ function metadataDashboardOptions(metadata) {
       Array.isArray(options.priceChangeMetrics) && options.priceChangeMetrics.length
         ? options.priceChangeMetrics
         : PRICE_CHANGE_METRICS,
+    displayCategories: COMPETITIVE_DISPLAY_CATEGORIES,
+    displayMetrics: COMPETITIVE_DISPLAY_METRICS,
   };
 }
 
@@ -1148,6 +1272,16 @@ async function buildCoffeeDashboardPayload(cfg, context, request) {
   const selectedMarketBrandPack = pickOption(options.products, queryValue(request.query.brandPack), DEFAULT_MARKET_VIEW_BRAND_PACK);
   const selectedMetric = pickOption(options.priceMetrics, queryValue(request.query.metric), DEFAULT_PRICE_METRIC);
   const selectedMetricChange = pickOption(options.priceChangeMetrics, queryValue(request.query.metricChange), DEFAULT_PRICE_CHANGE_METRIC);
+  const selectedDisplayCategory = pickOption(
+    options.displayCategories,
+    queryValue(request.query.displayCategory),
+    DEFAULT_COMPETITIVE_DISPLAY_CATEGORY,
+  );
+  const selectedDisplayMetric = pickOption(
+    options.displayMetrics,
+    queryValue(request.query.displayMetric),
+    DEFAULT_COMPETITIVE_DISPLAY_METRIC,
+  );
   const selectedPeriod = pickMarketViewPeriod(nonMonthlyPeriods, queryValue(request.query.period));
 
   const importRunId = context?.run?.$id || "";
@@ -1171,6 +1305,10 @@ async function buildCoffeeDashboardPayload(cfg, context, request) {
         products: options.products,
         priceMetrics: options.priceMetrics,
         priceChangeMetrics: options.priceChangeMetrics,
+        displayCategory: selectedDisplayCategory,
+        displayMetric: selectedDisplayMetric,
+        displayCategories: options.displayCategories,
+        displayMetrics: options.displayMetrics,
       },
       counts: { loadedRows: 0, apiRowsLoaded: 0, importRuns: 0 },
       views: { coffeeDashboards: {} },
@@ -1220,6 +1358,10 @@ async function buildCoffeeDashboardPayload(cfg, context, request) {
       products: options.products,
       priceMetrics: options.priceMetrics,
       priceChangeMetrics: options.priceChangeMetrics,
+      displayCategory: selectedDisplayCategory,
+      displayMetric: selectedDisplayMetric,
+      displayCategories: options.displayCategories,
+      displayMetrics: options.displayMetrics,
     },
     counts: {
       loadedRows: metadata?.rowCount || context.run.row_count,
@@ -1261,6 +1403,15 @@ async function buildCoffeeDashboardPayload(cfg, context, request) {
           },
           rows: marketViewRows(marketViewProductRows, marketViewBaselineRows, selectedPeriod, selectedMarketBrandPack),
         },
+        impactOfDisplay: impactDisplayPayload(lookup, monthlyPeriods, selectedMarket, selectedBrandPack1),
+        competitiveDisplay: competitiveDisplayPayload(
+          marketRows,
+          lookup,
+          monthlyPeriods,
+          selectedMarket,
+          selectedDisplayCategory,
+          selectedDisplayMetric,
+        ),
       },
     },
   };

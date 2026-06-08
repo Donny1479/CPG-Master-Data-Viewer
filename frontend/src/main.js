@@ -53,6 +53,8 @@ const VIEW_CONFIGS = [
     defaultBrandPack2: "Private Label Single Serve",
     defaultMetric: "Avg Units Price",
     defaultMetricChange: "Avg Units Price % Chg YA",
+    defaultDisplayCategory: "Packaged Coffee - Single Serve",
+    defaultDisplayMetric: "$ Shr of TDP - Any Display",
     controls: ["market", "brandPack1", "brandPack2"],
   },
   {
@@ -582,6 +584,8 @@ function defaultFilters(config) {
     brandPack: config.defaultBrandPack || "Private Label Single Serve",
     metric: config.defaultMetric || "Avg Units Price",
     metricChange: config.defaultMetricChange || "Avg Units Price % Chg YA",
+    displayCategory: config.defaultDisplayCategory || "Packaged Coffee - Single Serve",
+    displayMetric: config.defaultDisplayMetric || "$ Shr of TDP - Any Display",
     competitorMode: "aggregate",
   };
 }
@@ -1175,6 +1179,8 @@ function renderCoffeeDashboard() {
       ${renderShareTrendedDashboard(dashboards.shareTrended)}
       ${renderPriceCompareDashboard(dashboards.priceCompare)}
       ${renderMarketViewDashboard(dashboards.marketView)}
+      ${renderImpactDisplayDashboard(dashboards.impactOfDisplay)}
+      ${renderCompetitiveDisplayDashboard(dashboards.competitiveDisplay)}
     </section>
   `;
 }
@@ -1271,6 +1277,67 @@ function renderMarketViewDashboard(view) {
           </div>
           ${marketViewTable(view.rows || [])}
         </section>
+      </section>
+    </section>
+  `;
+}
+
+function renderImpactDisplayDashboard(view) {
+  if (!view) return emptyPanel("No impact of display data for this selection.");
+  return `
+    <section class="dashboard-section">
+      <header class="dashboard-section-header">
+        <div>
+          <h2>Impact of Display</h2>
+          <span>${escapeHtml(view.market)} | ${escapeHtml(view.product)}</span>
+        </div>
+      </header>
+      <section class="dashboard-chart-grid">
+        ${trendChartCard(
+          `${view.product}: Share and Display Support`,
+          "$ Share vs $ Share of Distribution on Display",
+          view.shareDisplay,
+          (value) => percent(value, 1),
+          { scale: "share", colors: ["#b21b25", "#0f7a79"], strokeWidth: 3.5 },
+        )}
+        ${trendChartCard(
+          `${view.product}: Avg Units Price`,
+          "Trended average unit price",
+          view.price,
+          (value) => currency(value, 2),
+          { scale: "currency", colors: ["#d69a2d"], strokeWidth: 3.5 },
+        )}
+      </section>
+    </section>
+  `;
+}
+
+function renderCompetitiveDisplayDashboard(view) {
+  if (!view) return emptyPanel("No competitive display data for this selection.");
+  return `
+    <section class="dashboard-section">
+      <header class="dashboard-section-header">
+        <div>
+          <h2>Competitive Display</h2>
+          <span>${escapeHtml(view.market)} | ${escapeHtml(view.category)} | ranked on ${escapeHtml(view.rankingPeriod)}</span>
+        </div>
+        <div class="section-controls">
+          ${sectionSelectControl("displayCategory", "Segment", state.data.filters.displayCategories || [], state.data.filters.displayCategory)}
+          ${sectionSelectControl("displayMetric", "Metric", state.data.filters.displayMetrics || [], state.data.filters.displayMetric)}
+        </div>
+      </header>
+      <section class="dashboard-chart-grid single">
+        ${trendChartCard(
+          `Top Display Brands - ${view.category}`,
+          view.metric,
+          view.display,
+          (value) => percent(value, 1),
+          {
+            scale: "share",
+            colors: ["#b21b25", "#0f7a79", "#d69a2d", "#566d7c", "#6f4e7c", "#217346", "#c7532f", "#4d3a33"],
+            strokeWidth: 3,
+          },
+        )}
       </section>
     </section>
   `;
@@ -2447,6 +2514,8 @@ function bindInteractions() {
   bindFilter("brandPack");
   bindFilter("metric");
   bindFilter("metricChange");
+  bindFilter("displayCategory");
+  bindFilter("displayMetric");
   bindChartTooltips();
 
   const competitorMode = document.querySelector("#competitorMode");
@@ -2609,6 +2678,8 @@ async function loadDashboard() {
     if (filters.period) params.set("period", filters.period);
     if (filters.metric) params.set("metric", filters.metric);
     if (filters.metricChange) params.set("metricChange", filters.metricChange);
+    if (filters.displayCategory) params.set("displayCategory", filters.displayCategory);
+    if (filters.displayMetric) params.set("displayMetric", filters.displayMetric);
     if (filters.brandPack1) params.set("brandPack", filters.brandPack1);
   }
 
@@ -2643,6 +2714,8 @@ async function loadDashboard() {
       brandPack: payload.filters.brandPack || filters.brandPack,
       metric: payload.filters.metric || filters.metric,
       metricChange: payload.filters.metricChange || filters.metricChange,
+      displayCategory: payload.filters.displayCategory || filters.displayCategory,
+      displayMetric: payload.filters.displayMetric || filters.displayMetric,
     };
   } catch (error) {
     if (state.auth.user) {
